@@ -75,9 +75,15 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         ctx.answerCbQuery('❌ Something went wrong')
     } else if (command == 'lang') {
         user.lang = args[0]
-        // Do not save language
-        let queryResult = await updateUser(bd, ctx.from.id, 'lang', user.lang)
-        console.log(queryResult)
+        await updateUser(bd, ctx.from.id, 'lang', user.lang)
+        ctx.answerCbQuery('')
+        let newText = MENUS.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins)
+        ctx.editMessageText(newText, {
+            reply_markup: {
+                inline_keyboard: MENUS.MAIN.KEYBOARD[user.lang]
+            }
+        })
+    } else if (command == 'back') {
         ctx.answerCbQuery('')
         let newText = MENUS.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins)
         ctx.editMessageText(newText, {
