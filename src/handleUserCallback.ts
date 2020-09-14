@@ -44,12 +44,18 @@ const MENUS = {
     },
     WITHDRAW: {
         TEXT: {
-            US: 'Withdraw text',
-            RU: 'Вывод Текст'
+            US: '📤 To withdraw funds from your balance, use command /withdraw. For example:\n' +
+                '/withdraw 2NDpxNTJ3u8LHkh4mtpD2yYEBeoNPVN1exP 0.00004307\n' +
+                '\n' +
+                'Make sure you entered your correct BTC address',
+            RU: '📤 Чтобы вывести средства со своего счёте, используйте команду /withdraw. Например:\n' +
+                '/withdraw 2NDpxNTJ3u8LHkh4mtpD2yYEBeoNPVN1exP 0.00004307\n' +
+                '\n' +
+                'Убедитесь, что вы указали свой корректный BTC адресс'
         },
         KEYBOARD: {
-            US: [],
-            RU: []
+            US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
+            RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
         }
     }
 }
@@ -93,7 +99,6 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         })
     } else if (command == 'deposit') {
         ctx.answerCbQuery('')
-        console.log(user.lang)
         let newText = MENUS.DEPOSIT.TEXT[user.lang].replace('{btcAddress}', user.btcAddress)
         ctx.editMessageText(newText, {
             reply_markup: {
@@ -101,7 +106,13 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             }
         })
     } else if (command == 'withdraw') {
-
+        ctx.answerCbQuery('')
+        let newText = MENUS.WITHDRAW.TEXT[user.lang]
+        ctx.editMessageText(newText, {
+            reply_markup: {
+                inline_keyboard: MENUS.WITHDRAW.KEYBOARD[user.lang]
+            }
+        })
     } else if (command == 'rules') {
 
     } else if (command == 'settings') {
