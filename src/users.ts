@@ -72,7 +72,8 @@ export async function updateUser(bd, id, fields, values) {
     return new Promise((resolve, reject) => {
         let queryFields: string = ''
         if (typeof values == 'string') {
-            queryFields = `${fields}=${values}`
+            console.log(fields, values)
+            queryFields = `${fields}="${values}"`
         } else {
             for (let field in fields) {
                 queryFields += `${fields[field]} = ${values[field]}`

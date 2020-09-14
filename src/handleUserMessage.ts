@@ -1,11 +1,8 @@
 import { IBlockIOApi } from './blockIOApi'
-import BlockIOApi from './blockIOApi'
 import * as mysql from 'mysql2'
 import { addUser, getUser, updateUser } from './users'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
-
-let blockio = new BlockIOApi(process.env.BLOCK_IO_TOKEN);
 
 export default async (ctx: TelegrafContext, bd: mysql.Connection, blockio: IBlockIOApi) => {
     let user: IUser = await getUser(bd, ctx.from.id)

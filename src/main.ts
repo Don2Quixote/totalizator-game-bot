@@ -6,7 +6,7 @@ import * as mysql from 'mysql2'
 import { Telegraf } from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 
-let blockio = new BlockIOApi('5d20-f2b7-62be-a3cc')
+let blockio = new BlockIOApi(process.env.BLOCKIO_TOKEN)
 
 const sql: mysql.Connection = mysql.createConnection({
     host: process.env.SQL_HOST,

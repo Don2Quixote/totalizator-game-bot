@@ -6,7 +6,7 @@ import { TelegrafContext } from 'telegraf/typings/context'
 const MENUS = {
     MAIN: {
         TEXT: {
-            US: '👋 Welcome to the "Totalizator" game!\n' +
+            US: '👋 Welcome to the Totalizator game!\n' +
                 '\n' +
                 '💰 Your balance: {balance} BTC\n' +
                 '🏆 Your wins: {wins}',
@@ -76,7 +76,8 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     } else if (command == 'lang') {
         user.lang = args[0]
         // Do not save language
-        await updateUser(bd, ctx.from.id, 'lang', user.lang)
+        let queryResult = await updateUser(bd, ctx.from.id, 'lang', user.lang)
+        console.log(queryResult)
         ctx.answerCbQuery('')
         let newText = MENUS.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins)
         ctx.editMessageText(newText, {
