@@ -76,7 +76,7 @@ export async function updateUser(bd, id, fields, values) {
             queryFields = `${fields}="${values}"`
         } else {
             for (let field in fields) {
-                queryFields += `${fields[field]} = ${values[field]}`
+                queryFields += `${fields[field]}="${values[field]}"`
                 if (fields[field + 1]) queryFields += ','
                 queryFields += ' '
             }
