@@ -15,12 +15,15 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
                         resolve({
                             id: user.id,
                             name: user.name,
+                            awaitingMessage: user.awaitingMessage,
+                            actionData: user.actionData,
                             lang: user.lang,
                             btcAddress: user.btcAddress,
                             balance: {
                                 btc: user.btc,
                                 satoshi: user.satoshi
                             },
+                            withdrawRequest: user.withdrawRequest,
                             wins: user.wins,
                             freeStake: user.freeStake,
                             stakes: stakes[0] ? stakes : []
@@ -33,31 +36,24 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
     })
 }
 
-export async function addUser(bd, id: number, name: string, btcAddress: string): Promise<boolean> {
+export async function addUser(bd, id: number, name: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         bd.query(`
             INSERT INTO users (
                 id,
                 name,
+                awaitingMessage,
+                actionData,
                 lang,
-                btcAddress,
                 btc,
                 satoshi,
+                withdrawRequest,
                 wins,
                 freeStake,
                 stakes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-            id,   // id
-            name, // name
-            '',   // lang
-            btcAddress, // btcAddress
-            0,    // balance.btc
-            0,    // balance.satoshi
-            0,    // wins
-            '',   // freeStake
-            ''    // stakes
-        ],
+            )
+            VALUES (${id}, "${name}", "", "", "", 0, 0, "0", 0, "", "")
+        `,
         (err, res) => {
             if (err) reject(err)
             else resolve(true)
@@ -65,14 +61,13 @@ export async function addUser(bd, id: number, name: string, btcAddress: string):
     })
 }
 
-type UserRowField = 'id' | 'name' | 'lang' | 'btcAddress' | 'btc' | 'satoshi' | 'wins' | 'freeStake' | 'stakes'
+type UserRowField = 'id' | 'name' | 'awaitingMessage' | 'actionData' | 'lang' | 'btcAddress' | 'btc' | 'satoshi' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
 export async function updateUser(bd: mysql.Connection, id: number, fields: Array<UserRowField>, values: Array<string | number>): Promise<boolean>
 export async function updateUser(bd: mysql.Connection, id: number, filed: UserRowField, value: string | number): Promise<boolean>
 export async function updateUser(bd, id, fields, values) {
     return new Promise((resolve, reject) => {
         let queryFields: string = ''
         if (typeof values == 'string') {
-            console.log(fields, values)
             queryFields = `${fields}="${values}"`
         } else {
             for (let field in fields) {

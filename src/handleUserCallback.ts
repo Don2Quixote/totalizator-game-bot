@@ -3,7 +3,7 @@ import { getUser, updateUser } from './users'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
-const MENUS = {
+const TEMPLATES = {
     MAIN: {
         TEXT: {
             US: '👋 Welcome to the Totalizator game!\n' +
@@ -33,25 +33,61 @@ const MENUS = {
     DEPOSIT: {
         TEXT: {
             US: '📥 To deposit funds to your balance, send sum you wish to this BTC address:\n' +
-                '{btcAddress}',
-            RU: '📥 Чтобы внести средства на свой баланс, отправьте сумму, которую хотите получить на этот BTC адресс:\n' +
-                '{btcAddress}'
+                process.env.BTC_ADDRESS + '\n' +
+                '\n' +
+                'Then press "submit" button and send transaction ID',
+            RU: '📥 Чтобы внести средства на свой баланс, отправьте сумму, которую хотите получить на этот BTC адрес:\n' +
+                process.env.BTC_ADDRESS + '\n' +
+                '\n' +
+                'После этого нажмите кнопку подтвердить и отправьте ID транзакции'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '👈 Back', callback_data: 'back' },
+                  { text: '✅ Submit', callback_data: 'submitDeposit' } ]
+            ],
+            RU: [
+                [ { text: '👈 Назад', callback_data: 'back' },
+                  { text: '✅ Подтвердить', callback_data: 'submitDeposit' } ]
+            ]
+        }
+    },
+    SUBMIT_DEPOSIT: {
+        TEXT: {
+            US: '📥 Enter the transaction ID:',
+            RU: '📥 Введите ID транзакции:'
+        }
+    },
+    WITHDRAW: {
+        TEXT: {
+            US: '📤 Enter address to withdraw BTC:',
+            RU: '📤 Введите адрес для вывода BTC:'
         },
         KEYBOARD: {
             US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
             RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
         }
     },
-    WITHDRAW: {
+    ALREADY_HAVE_WITHDRAW_REQUEST: {
         TEXT: {
-            US: '📤 To withdraw funds from your balance, use command /withdraw. For example:\n' +
-                '/withdraw 2NDpxNTJ3u8LHkh4mtpD2yYEBeoNPVN1exP 0.00004307\n' +
-                '\n' +
-                'Make sure you entered your correct BTC address',
-            RU: '📤 Чтобы вывести средства со своего счёте, используйте команду /withdraw. Например:\n' +
-                '/withdraw 2NDpxNTJ3u8LHkh4mtpD2yYEBeoNPVN1exP 0.00004307\n' +
-                '\n' +
-                'Убедитесь, что вы указали свой корректный BTC адресс'
+            US: 'You already have withdraw request ({witdrawRequestSum})',
+            RU: 'У вас уже есть заявка на вывод средств ({withdrawRequestSum})'
+        }
+    },
+    RULES: {
+        TEXT: {
+            US: '📢 Engligh rules',
+            RU: '📢 Правила на русском'
+        },
+        KEYBOARD: {
+            US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
+            RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
+        }
+    },
+    SETTINGS: {
+        TEXT: {
+            US: '⚙️ Select language',
+            RU: '⚙️ Выберите язык'
         },
         KEYBOARD: {
             US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
@@ -76,46 +112,62 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     let user: IUser = await getUser(bd, ctx.from.id)
     let [command, ...args] = ctx.update.callback_query.data.split(':')
     console.log(command, args)
-    
+    // hueta
     if (!user) {
         ctx.answerCbQuery('❌ Something went wrong')
     } else if (command == 'lang') {
-        user.lang = args[0]
+        user.lang = args[0] as 'US' | 'RU'
         await updateUser(bd, ctx.from.id, 'lang', user.lang)
         ctx.answerCbQuery('')
-        let newText = MENUS.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins)
+        let newText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
         ctx.editMessageText(newText, {
             reply_markup: {
-                inline_keyboard: MENUS.MAIN.KEYBOARD[user.lang]
+                inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
             }
         })
     } else if (command == 'back') {
         ctx.answerCbQuery('')
-        let newText = MENUS.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins)
+        let newText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
         ctx.editMessageText(newText, {
             reply_markup: {
-                inline_keyboard: MENUS.MAIN.KEYBOARD[user.lang]
+                inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
             }
         })
     } else if (command == 'deposit') {
         ctx.answerCbQuery('')
-        let newText = MENUS.DEPOSIT.TEXT[user.lang].replace('{btcAddress}', user.btcAddress)
+        let newText = TEMPLATES.DEPOSIT.TEXT[user.lang]
         ctx.editMessageText(newText, {
             reply_markup: {
-                inline_keyboard: MENUS.DEPOSIT.KEYBOARD[user.lang]
+                inline_keyboard: TEMPLATES.DEPOSIT.KEYBOARD[user.lang]
             }
         })
-    } else if (command == 'withdraw') {
+    } else if (command == 'submitDeposit') {
         ctx.answerCbQuery('')
-        let newText = MENUS.WITHDRAW.TEXT[user.lang]
-        ctx.editMessageText(newText, {
+        await updateUser(bd, ctx.from.id, 'awaitingMessage', 'transactionID')
+        let replyText = TEMPLATES.SUBMIT_DEPOSIT.TEXT[user.lang]
+        ctx.reply(replyText)
+    } else if (command == 'withdraw') {
+        if (user.withdrawRequest) {
+            ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', user.withdrawRequest), true)
+        } else {
+            ctx.answerCbQuery('')
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'withdrawAdddress')
+            let replyText = TEMPLATES.WITHDRAW.TEXT[user.lang]
+            ctx.reply(replyText)
+        }
+    } else if (command == 'rules') {
+        ctx.answerCbQuery('')
+        ctx.editMessageText(TEMPLATES.RULES.TEXT[user.lang], {
             reply_markup: {
-                inline_keyboard: MENUS.WITHDRAW.KEYBOARD[user.lang]
+                inline_keyboard: TEMPLATES.RULES.KEYBOARD[user.lang]
             }
         })
-    } else if (command == 'rules') {
-
     } else if (command == 'settings') {
-
+        ctx.answerCbQuery('')
+        ctx.editMessageText(TEMPLATES.SETTINGS.TEXT[user.lang], {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.SETTINGS.KEYBOARD[user.lang]
+            }
+        })
     }
 }
