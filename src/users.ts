@@ -47,7 +47,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
                 freeStake,
                 stakes
             )
-            VALUES (${id}, "${name}", "", "", "", 0, 0, "0", 0, "", "")
+            VALUES (${id}, "${name}", "", "", "", 0, 0, 0, "", "")
         `,
         (err, res) => {
             if (err) reject(err)

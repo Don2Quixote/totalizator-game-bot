@@ -5,7 +5,7 @@ export declare interface IUser {
     actionData: string,
     lang: 'RU' | 'US',
     balance: number,
-    withdrawRequest: string,
+    withdrawRequest: number,
     wins: number,
     freeStake: string,
     stakes: Array<string>
@@ -18,7 +18,7 @@ export declare interface IUserRow {
     actionData: string,
     lang: 'RU' | 'US',
     balance: number,
-    withdrawRequest: string,
+    withdrawRequest: number,
     wins: number,
     freeStake: string,
     stakes: string

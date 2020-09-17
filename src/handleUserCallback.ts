@@ -108,16 +108,17 @@ const TEMPLATES = {
     }
 }
 
-const balanceToString = (balance: IUser['balance']): string => {
-    let str = balance.btc.toString() + '.'
-    if      (balance.satoshi < 10) return str + '0000000' + balance.satoshi.toString()
-    else if (balance.satoshi < 100) return str + '000000' + balance.satoshi.toString()
-    else if (balance.satoshi < 1000) return str + '00000' + balance.satoshi.toString()
-    else if (balance.satoshi < 10000) return str + '0000' + balance.satoshi.toString()
-    else if (balance.satoshi < 100000) return str + '000' + balance.satoshi.toString()
-    else if (balance.satoshi < 1000000) return str + '00' + balance.satoshi.toString()
-    else if (balance.satoshi < 10000000) return str + '0' + balance.satoshi.toString()
-    return str + balance.satoshi.toString()
+const balanceToString = (satoshi: number): string => {
+    let btcPart =  (satoshi / 100000000).toFixed(0)
+    let satoshiPart: any = satoshi % 100000000
+    if      (satoshiPart < 10) satoshiPart = '0000000' + satoshiPart.toString()
+    else if (satoshiPart < 100) satoshiPart = '000000' + satoshiPart.toString()
+    else if (satoshiPart < 1000) satoshiPart = '00000' + satoshiPart.toString()
+    else if (satoshiPart < 10000) satoshiPart = '0000' + satoshiPart.toString()
+    else if (satoshiPart < 100000) satoshiPart = '000' + satoshiPart.toString()
+    else if (satoshiPart < 1000000) satoshiPart = '00' + satoshiPart.toString()
+    else if (satoshiPart < 10000000) satoshiPart = '0' + satoshiPart.toString()
+    return btcPart + '.' + satoshiPart
 }
 
 export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
@@ -165,7 +166,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         ctx.reply(replyText)
     } else if (command == 'withdraw') {
         if (user.withdrawRequest) {
-            ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', user.withdrawRequest), true)
+            ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', balanceToString(user.withdrawRequest)), true)
         } else {
             ctx.answerCbQuery('')
             await updateUser(bd, ctx.from.id, 'awaitingMessage', 'withdrawAdddress')

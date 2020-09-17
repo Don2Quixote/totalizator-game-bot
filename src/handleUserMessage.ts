@@ -71,7 +71,6 @@ const balanceToString = (satoshi: number): string => {
     return btcPart + '.' + satoshiPart
 }
 
-const balanceToString(satoshi: number): string => (satoshi / 100000000).toFixed() + '.' + (satoshi % 100000000)
 
 export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     if (!ctx.message.text) return
@@ -99,7 +98,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         ctx.reply(TEMPLATES.WITHDRAW_ENTER_SUM.TEXT[user.lang])
     } else if (user.awaitingMessage == 'withdrawSum') {
         let sum = ctx.message.text
-        if (user.balance.btc * 100000000 + user.balance.satoshi < +(parseFloat(sum) * 100000000).toFixed(0)) {
+        if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
             ctx.reply(TEMPLATES.WITHDRAW_NOT_ENOUGH_FUNDS_ON_BALANCE.TEXT[user.lang])
         } else if (+sum < 0.0005) {
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])
