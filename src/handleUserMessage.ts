@@ -58,19 +58,22 @@ const TEMPLATES = {
     }
 }
 
-const balanceToString = (balance: IUser['balance']): string => {
-    let str = balance.btc.toString() + '.'
-    if      (balance.satoshi < 10) return str + '0000000' + balance.satoshi.toString()
-    else if (balance.satoshi < 100) return str + '000000' + balance.satoshi.toString()
-    else if (balance.satoshi < 1000) return str + '00000' + balance.satoshi.toString()
-    else if (balance.satoshi < 10000) return str + '0000' + balance.satoshi.toString()
-    else if (balance.satoshi < 100000) return str + '000' + balance.satoshi.toString()
-    else if (balance.satoshi < 1000000) return str + '00' + balance.satoshi.toString()
-    else if (balance.satoshi < 10000000) return str + '0' + balance.satoshi.toString()
-    return str + balance.satoshi.toString()
+const balanceToString = (satoshi: number): string => {
+    let btcPart =  (satoshi / 100000000).toFixed(0)
+    let satoshiPart: any = satoshi % 100000000
+    if      (satoshiPart < 10) satoshiPart = '0000000' + satoshiPart.toString()
+    else if (satoshiPart < 100) satoshiPart = '000000' + satoshiPart.toString()
+    else if (satoshiPart < 1000) satoshiPart = '00000' + satoshiPart.toString()
+    else if (satoshiPart < 10000) satoshiPart = '0000' + satoshiPart.toString()
+    else if (satoshiPart < 100000) satoshiPart = '000' + satoshiPart.toString()
+    else if (satoshiPart < 1000000) satoshiPart = '00' + satoshiPart.toString()
+    else if (satoshiPart < 10000000) satoshiPart = '0' + satoshiPart.toString()
+    return btcPart + '.' + satoshiPart
 }
 
-export default async (ctx: TelegrafContext, bd: mysql.Connection, blockio: IBlockIOApi) => {
+const balanceToString(satoshi: number): string => (satoshi / 100000000).toFixed() + '.' + (satoshi % 100000000)
+
+export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     if (!ctx.message.text) return
     let [command, ...args] = ctx.message.text.split(' ')
     console.log(command, args)
@@ -128,7 +131,10 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection, blockio: IBloc
             parse_mode: 'MarkdownV2',
             reply_markup: {
                 inline_keyboard: [
-                    [ { text: '♻️ Готово', callback_data: 'removeRequest' } ]
+                    [
+                        { text: '👁 sochain', url: 'https://sochain.com/tx/BTC/' + encodeURIComponent(transactionID) },
+                        { text: '♻️ Готово', callback_data: 'removeRequest' }
+                    ]
                 ]
             }
         })

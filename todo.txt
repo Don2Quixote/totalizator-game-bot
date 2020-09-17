@@ -1,1 +1,0 @@
-Replace menu to main when press submit button in deposit menu

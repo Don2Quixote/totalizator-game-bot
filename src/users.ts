@@ -18,11 +18,7 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
                             awaitingMessage: user.awaitingMessage,
                             actionData: user.actionData,
                             lang: user.lang,
-                            btcAddress: user.btcAddress,
-                            balance: {
-                                btc: user.btc,
-                                satoshi: user.satoshi
-                            },
+                            balance: user.balance,
                             withdrawRequest: user.withdrawRequest,
                             wins: user.wins,
                             freeStake: user.freeStake,
@@ -45,8 +41,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
                 awaitingMessage,
                 actionData,
                 lang,
-                btc,
-                satoshi,
+                balance,
                 withdrawRequest,
                 wins,
                 freeStake,
@@ -61,7 +56,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
     })
 }
 
-type UserRowField = 'id' | 'name' | 'awaitingMessage' | 'actionData' | 'lang' | 'btcAddress' | 'btc' | 'satoshi' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
+type UserRowField = 'id' | 'name' | 'awaitingMessage' | 'actionData' | 'lang' | 'balance' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
 export async function updateUser(bd: mysql.Connection, id: number, fields: Array<UserRowField>, values: Array<string | number>): Promise<boolean>
 export async function updateUser(bd: mysql.Connection, id: number, filed: UserRowField, value: string | number): Promise<boolean>
 export async function updateUser(bd, id, fields, values) {

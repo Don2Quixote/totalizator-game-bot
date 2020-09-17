@@ -18,9 +18,14 @@ const sql: mysql.Connection = mysql.createConnection({
 const bot = new Telegraf(process.env.TOKEN)
 
 import handleUserMessage from './handleUserMessage'
+import handleAdminMessage from './handleAdminMessage'
 bot.on('message', async (ctx: TelegrafContext) => {
     try {
-        await handleUserMessage(ctx, sql, blockio)
+        if (ctx.from.id == +process.env.ADMIN_ID) {
+            await handleAdminMessage(ctx, sql)
+        } else {
+            await handleUserMessage(ctx, sql)
+        }
     } catch (e) {
         ctx.reply('❌ Непредвиденная ошибка. Попробуйте позже')
         console.log(e)

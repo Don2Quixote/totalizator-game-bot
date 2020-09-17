@@ -4,11 +4,7 @@ export declare interface IUser {
     awaitingMessage: 'withdrawAddress' | 'withdrawSum' | 'transactionID' | '',
     actionData: string,
     lang: 'RU' | 'US',
-    btcAddress: string,
-    balance: {
-        btc: number,
-        satoshi: number
-    },
+    balance: number,
     withdrawRequest: string,
     wins: number,
     freeStake: string,
@@ -21,9 +17,7 @@ export declare interface IUserRow {
     awaitingMessage: 'withdrawAddress' | 'withdrawSum' | 'transactionID' | '',
     actionData: string,
     lang: 'RU' | 'US',
-    btcAddress: string,
-    btc: number,
-    satoshi: number,
+    balance: number,
     withdrawRequest: string,
     wins: number,
     freeStake: string,

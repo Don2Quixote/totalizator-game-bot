@@ -36,7 +36,7 @@ const TEMPLATES = {
                 process.env.BTC_ADDRESS + '\n' +
                 '\n' +
                 'Then press "submit" button and send transaction ID',
-            RU: '📥 Чтобы внести средства на свой баланс, отправьте сумму, которую хотите получить на этот BTC адрес:\n' +
+            RU: '📥 Чтобы внести средства на свой баланс, отправьте сумму, которую хотите получить, на этот BTC адрес:\n' +
                 process.env.BTC_ADDRESS + '\n' +
                 '\n' +
                 'После этого нажмите кнопку подтвердить и отправьте ID транзакции'
@@ -76,8 +76,8 @@ const TEMPLATES = {
     },
     RULES: {
         TEXT: {
-            US: '📢 Engligh rules',
-            RU: '📢 Правила на русском'
+            US: '📢 Rules',
+            RU: '📢 Правила'
         },
         KEYBOARD: {
             US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
@@ -90,8 +90,20 @@ const TEMPLATES = {
             RU: '⚙️ Выберите язык'
         },
         KEYBOARD: {
-            US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
-            RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
+            US: [
+                [
+                    { text: '🇺🇸', callback_data: 'lang:US' },
+                    { text: '🇷🇺', callback_data: 'lang:RU' }
+                ],
+                [ { text: '👈 Back', callback_data: 'back' } ]
+            ],
+            RU: [
+                [
+                    { text: '🇺🇸', callback_data: 'lang:US' },
+                    { text: '🇷🇺', callback_data: 'lang:RU' }
+                ],
+                [ { text: '👈 Назад', callback_data: 'back' } ]
+            ]
         }
     }
 }
@@ -112,7 +124,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     let user: IUser = await getUser(bd, ctx.from.id)
     let [command, ...args] = ctx.update.callback_query.data.split(':')
     console.log(command, args)
-    // hueta
+    
     if (!user) {
         ctx.answerCbQuery('❌ Something went wrong')
     } else if (command == 'lang') {
@@ -142,8 +154,13 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             }
         })
     } else if (command == 'submitDeposit') {
-        ctx.answerCbQuery('')
         await updateUser(bd, ctx.from.id, 'awaitingMessage', 'transactionID')
+        ctx.answerCbQuery('')
+        await ctx.editMessageText(TEMPLATES.MAIN.TEXT[user.lang], {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
+            }
+        })
         let replyText = TEMPLATES.SUBMIT_DEPOSIT.TEXT[user.lang]
         ctx.reply(replyText)
     } else if (command == 'withdraw') {
