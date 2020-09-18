@@ -59,6 +59,31 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         }
     } else if (command == '/balance') {
         
+    } else if (command == '/vip') {
+        let user: IUser = await getUser(bd, +args[0])
+        if (!user) {
+            ctx.reply('❌ Пользователь не найден')
+        } else {
+            if (!user.vip) {
+                await updateUser(bd, +args[0], 'vip', 1)
+                ctx.reply('✅ Статус пользователя изменён')
+            } else {
+                ctx.reply('ℹ️ Пользователь уже имеет статус VIP')
+            }
+        }
+    } else if (command == '/removeVip') {
+        let user: IUser = await getUser(bd, +args[0])
+        if (!user) {
+            ctx.reply('❌ Пользователь не найден')
+        } else {
+            if (user.vip) {
+                await updateUser(bd, +args[0], 'vip', 1)
+                ctx.reply('✅ Статус пользователя изменён')
+            } else {
+                ctx.reply('ℹ️ У пользователя нет статуса VIP')
+            }
+        }
+        
     } else {
         ctx.reply('❌ Неизвестная команда - ' + command.replace('/', ''))
     }

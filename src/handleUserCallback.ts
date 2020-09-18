@@ -17,14 +17,20 @@ const TEMPLATES = {
         },
         KEYBOARD: {
             US: [
+                [ { text: '❇️ Free stake', callback_data: 'freeStake' },
+                  { text: '💸 Stake', callback_data: 'stake' } ],
                 [ { text: '📥 Deposit', callback_data: 'deposit' },
                   { text: '📤 Withdraw', callback_data: 'withdraw' } ],
+                [ { text: '👥 Refferals', callback_data: 'refferals' } ],
                 [ { text: '📢 Rules', callback_data: 'rules' },
                   { text: '⚙️ Settings', callback_data: 'settings' } ]
             ],
             RU: [
+                [ { text: '❇️ Бесплатная ставка', callback_data: 'freeStake' },
+                  { text: '💸 Ставка', callback_data: 'stake' } ],
                 [ { text: '📥 Пополнить', callback_data: 'deposit' },
                   { text: '📤 Вывести', callback_data: 'withdraw' } ],
+                [ { text: '👥 Рефералы', callback_data: 'refferals' } ],
                 [ { text: '📢 Правила', callback_data: 'rules' },
                   { text: '⚙️ Настройки', callback_data: 'settings' } ]
             ]
