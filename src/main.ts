@@ -1,12 +1,8 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
-import { IBlockIOApi } from './blockIOApi'
-import BlockIOApi from './blockIOApi'
 import * as mysql from 'mysql2'
 import { Telegraf } from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
-
-let blockio = new BlockIOApi(process.env.BLOCKIO_TOKEN)
 
 const sql: mysql.Connection = mysql.createConnection({
     host: process.env.SQL_HOST,
