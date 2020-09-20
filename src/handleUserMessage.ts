@@ -60,6 +60,12 @@ const TEMPLATES = {
             US: '✅ Withdraw request created',
             RU: '✅ Заявка на вывод средств создана'
         }
+    },
+    WITHDRAW_REQUEST_CANCELED: {
+        TEXT: {
+            US: 'ℹ️ Withdraw request canceled',
+            RU: 'ℹ️ Запрос на вывод средств отмёнен',
+        }
     }
 }
 
@@ -99,11 +105,29 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     }
     
     if (user.awaitingMessage == 'withdrawAddress') {
-        await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [ctx.message.text, 'withdrawSum'])
-        ctx.reply(TEMPLATES.WITHDRAW_ENTER_SUM.TEXT[user.lang])
+        let messageText = ctx.message.text.toLowerCase()
+        if (messageText.includes('отменить') || messageText.includes('cancel')) {
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else {
+            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [ctx.message.text, 'withdrawSum'])
+            ctx.reply(TEMPLATES.WITHDRAW_ENTER_SUM.TEXT[user.lang])
+        }
     } else if (user.awaitingMessage == 'withdrawSum') {
+        let messageText = ctx.message.text.toLowerCase()
         let sum = ctx.message.text
-        if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
+        if (messageText.includes('отменить') || messageText.includes('cancel')) {
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
             ctx.reply(TEMPLATES.WITHDRAW_NOT_ENOUGH_FUNDS_ON_BALANCE.TEXT[user.lang])
         } else if (+sum < 0.0005) {
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])

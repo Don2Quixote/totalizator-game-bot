@@ -15,6 +15,7 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
                         resolve({
                             id: user.id,
                             name: user.name,
+                            vip: user.vip,
                             awaitingMessage: user.awaitingMessage,
                             actionData: user.actionData,
                             lang: user.lang,
@@ -38,6 +39,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
             INSERT INTO users (
                 id,
                 name,
+                vip,
                 awaitingMessage,
                 actionData,
                 lang,
@@ -47,7 +49,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
                 freeStake,
                 stakes
             )
-            VALUES (${id}, "${name}", "", "", "", 0, 0, 0, "", "")
+            VALUES (${id}, "${name}", 0, "", "", "", 0, 0, 0, "", "")
         `,
         (err, res) => {
             if (err) reject(err)
@@ -56,21 +58,29 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
     })
 }
 
-type UserRowField = 'id' | 'name' | 'awaitingMessage' | 'actionData' | 'lang' | 'balance' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
+type UserRowField = 'id' | 'name' | 'vip' | 'awaitingMessage' | 'actionData' | 'lang' | 'balance' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
 export async function updateUser(bd: mysql.Connection, id: number, fields: Array<UserRowField>, values: Array<string | number>): Promise<boolean>
 export async function updateUser(bd: mysql.Connection, id: number, filed: UserRowField, value: string | number): Promise<boolean>
 export async function updateUser(bd, id, fields, values) {
     return new Promise((resolve, reject) => {
         let queryFields: string = ''
-        if (typeof values == 'string') {
+        if (typeof fields == 'string') {
             queryFields = `${fields}="${values}"`
         } else {
             for (let field in fields) {
                 queryFields += `${fields[field]}="${values[field]}"`
-                if (fields[field + 1]) queryFields += ','
+                if (fields.length - +field - 1) queryFields += ','
                 queryFields += ' '
             }
         }
+        let query = 
+            `
+            UPDATE users
+            SET
+            ${queryFields}
+            WHERE id = ${id}
+            `
+        console.log(query)
         bd.query(
             `
             UPDATE users

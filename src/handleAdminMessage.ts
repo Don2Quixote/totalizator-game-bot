@@ -77,13 +77,12 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             ctx.reply('❌ Пользователь не найден')
         } else {
             if (user.vip) {
-                await updateUser(bd, +args[0], 'vip', 1)
+                await updateUser(bd, +args[0], 'vip', 0)
                 ctx.reply('✅ Статус пользователя изменён')
             } else {
                 ctx.reply('ℹ️ У пользователя нет статуса VIP')
             }
         }
-        
     } else {
         ctx.reply('❌ Неизвестная команда - ' + command.replace('/', ''))
     }

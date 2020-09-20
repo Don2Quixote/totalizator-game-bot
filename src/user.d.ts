@@ -1,6 +1,7 @@
 export declare interface IUser {
     id: number,
     name: string,
+    vip: 1 | 0,
     awaitingMessage: 'withdrawAddress' | 'withdrawSum' | 'transactionID' | '',
     actionData: string,
     lang: 'RU' | 'US',
@@ -14,6 +15,7 @@ export declare interface IUser {
 export declare interface IUserRow {
     id: number,
     name: string,
+    vip: 1 | 0,
     awaitingMessage: 'withdrawAddress' | 'withdrawSum' | 'transactionID' | '',
     actionData: string,
     lang: 'RU' | 'US',

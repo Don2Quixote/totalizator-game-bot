@@ -70,14 +70,20 @@ const TEMPLATES = {
             RU: '📤 Введите адрес для вывода BTC:'
         },
         KEYBOARD: {
-            US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
-            RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
+            US: [ [ { text: '❌ Cancel withdraw' } ] ],
+            RU: [ [ { text: '❌ Отменить вывод' } ] ]
         }
     },
     ALREADY_HAVE_WITHDRAW_REQUEST: {
         TEXT: {
             US: 'You already have withdraw request ({witdrawRequestSum})',
             RU: 'У вас уже есть заявка на вывод средств ({withdrawRequestSum})'
+        }
+    },
+    ZERO_BALANCE: {
+        TEXT: {
+            US: '❌ You have no funds on your account',
+            RU: '❌ У вас нет средств на балансе'
         }
     },
     RULES: {
@@ -173,11 +179,18 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     } else if (command == 'withdraw') {
         if (user.withdrawRequest) {
             ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', balanceToString(user.withdrawRequest)), true)
+        } else if (user.balance == 0) {
+            ctx.answerCbQuery(TEMPLATES.ZERO_BALANCE.TEXT[user.lang])
         } else {
             ctx.answerCbQuery('')
-            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'withdrawAdddress')
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'withdrawAddress')
             let replyText = TEMPLATES.WITHDRAW.TEXT[user.lang]
-            ctx.reply(replyText)
+            ctx.reply(replyText, {
+                reply_markup: {
+                    keyboard: TEMPLATES.WITHDRAW.KEYBOARD[user.lang],
+                    resize_keyboard: true
+                }
+            })
         }
     } else if (command == 'rules') {
         ctx.answerCbQuery('')
