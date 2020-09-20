@@ -121,7 +121,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         let messageText = ctx.message.text.toLowerCase()
         let sum = ctx.message.text
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
-            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
