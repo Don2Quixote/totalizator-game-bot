@@ -80,7 +80,6 @@ export async function updateUser(bd, id, fields, values) {
             ${queryFields}
             WHERE id = ${id}
             `
-        console.log(query)
         bd.query(
             `
             UPDATE users
