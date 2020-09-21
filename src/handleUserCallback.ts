@@ -121,6 +121,26 @@ const TEMPLATES = {
                 [ { text: '👈 Назад', callback_data: 'back' } ]
             ]
         }
+    },
+    REFERRALS: {
+        TEXT: {
+            US: '👥 Referrals\n' +
+                '\n' +
+                'ℹ️ Your refferer: {referrerName}\n' +
+                '🤝 Invited: {referralsCount}\n' +
+                '\n' +
+                '🔗 Your invitation link: t.me/{botUsername}?start={userID}',
+            RU: '👥 Рефералы\n' +
+                '\n' +
+                'ℹ️ Вас пригласил: {referrerName}\n' +
+                '🤝 Приглашено: {referralsCount}\n' +
+                '\n' +
+                '🔗 Ваша ссылка для приглашения: t.me/{botUsername}?start={userID}'
+        },
+        KEYBOARD: {
+            US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
+            RU: [ [ { text: '👈 Назад', callback_data: 'back' } ] ]
+        }
     }
 }
 
@@ -214,6 +234,20 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         ctx.editMessageText(TEMPLATES.SETTINGS.TEXT[user.lang], {
             reply_markup: {
                 inline_keyboard: TEMPLATES.SETTINGS.KEYBOARD[user.lang]
+            }
+        })
+    } else if (command == 'refferals') {
+        ctx.answerCbQuery('')
+        let referrer = await getUser(bd, user.referrer)
+        let newText =
+            TEMPLATES.REFERRALS.TEXT[user.lang]
+            .replace('{referrerName}', referrer ? referrer.name : '❌')
+            .replace('{referralsCount}', user.referrals.toString())
+            .replace('{botUsername}', process.env.BOT_USERNAME)
+            .replace('{userID}', user.id.toString())
+        ctx.editMessageText(newText, {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.REFERRALS.KEYBOARD[user.lang]
             }
         })
     }

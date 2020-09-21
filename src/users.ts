@@ -16,6 +16,8 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
                             id: user.id,
                             name: user.name,
                             vip: user.vip,
+                            referrer: user.referrer,
+                            referrals: user.referrals,
                             awaitingMessage: user.awaitingMessage,
                             actionData: user.actionData,
                             lang: user.lang,
@@ -33,13 +35,17 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
     })
 }
 
-export async function addUser(bd, id: number, name: string): Promise<boolean> {
+export async function addUser(bd: mysql.Connection, id: number, name: string): Promise<boolean>
+export async function addUser(bd: mysql.Connection, id: number, name: string, referrerID: number): Promise<boolean>
+export async function addUser(bd, id, name, referrerID): Promise<boolean> {
     return new Promise((resolve, reject) => {
         bd.query(`
             INSERT INTO users (
                 id,
                 name,
                 vip,
+                referrer,
+                referrals,
                 awaitingMessage,
                 actionData,
                 lang,
@@ -49,7 +55,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
                 freeStake,
                 stakes
             )
-            VALUES (${id}, "${name}", 0, "", "", "", 0, 0, 0, "", "")
+            VALUES (${id}, "${name}", 0, ${referrerID ? referrerID : 0}, 0, "", "", "", 0, 0, 0, "", "")
         `,
         (err, res) => {
             if (err) reject(err)
@@ -58,7 +64,7 @@ export async function addUser(bd, id: number, name: string): Promise<boolean> {
     })
 }
 
-type UserRowField = 'id' | 'name' | 'vip' | 'awaitingMessage' | 'actionData' | 'lang' | 'balance' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
+type UserRowField = 'id' | 'name' | 'vip' | 'refferer' | 'referrals' | 'awaitingMessage' | 'actionData' | 'lang' | 'balance' | 'withdrawRequest' | 'wins' | 'freeStake' | 'stakes'
 export async function updateUser(bd: mysql.Connection, id: number, fields: Array<UserRowField>, values: Array<string | number>): Promise<boolean>
 export async function updateUser(bd: mysql.Connection, id: number, filed: UserRowField, value: string | number): Promise<boolean>
 export async function updateUser(bd, id, fields, values) {

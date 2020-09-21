@@ -37,10 +37,16 @@ const TEMPLATES = {
             ]
         }
     },
-    DEPOSIT_CANCELED: {
+    DEPOSIT_REQUEST_CANCELED: {
         TEXT: {
             US: 'ℹ️ Deposit canceled',
             RU: 'ℹ️ Депозит отмёнен',
+        }
+    },
+    DEPOSIT_REQUEST_CREATED: {
+        TEXT: {
+            US: '✅ Deposit request created',
+            RU: '✅ Заявка депозит создана'
         }
     },
     WITHDRAW_ENTER_SUM: {
@@ -96,7 +102,16 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
 
     let user: IUser = await getUser(bd, ctx.from.id)
     if (!user) {
-        await addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name)
+        let referrerID = parseInt(args[0])
+        let referrer: IUser
+        if (referrerID) {
+            referrer = await getUser(bd, referrerID)
+        }
+        if (referrer) {
+            await addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name, referrerID)
+        } else {
+            await addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name)
+        }
         ctx.reply('👋 Select language', {
             reply_markup: {
                 inline_keyboard: [
@@ -158,7 +173,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         let messageText = ctx.message.text.toLowerCase()
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
-            ctx.reply(TEMPLATES.DEPOSIT_CANCELED.TEXT[user.lang], {
+            ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
                 }
@@ -170,7 +185,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 '📥 Депозит\n' +
                 `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
                 `📌 ID Транзакции: ${transactionID}\n`
-            ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
+            await ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
                 parse_mode: 'MarkdownV2',
                 reply_markup: {
                     inline_keyboard: [
@@ -181,6 +196,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                     ]
                 }
             })
+            ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CREATED.TEXT[user.lang])
         }
     }
     if (command == '/start') {
