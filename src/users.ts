@@ -35,9 +35,7 @@ export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> 
     })
 }
 
-export async function addUser(bd: mysql.Connection, id: number, name: string): Promise<boolean>
-export async function addUser(bd: mysql.Connection, id: number, name: string, referrerID: number): Promise<boolean>
-export async function addUser(bd, id, name, referrerID): Promise<boolean> {
+export async function addUser(bd: mysql.Connection, id: number, name: string, referrerID?: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
         bd.query(`
             INSERT INTO users (

@@ -29,9 +29,14 @@ bot.on('message', async (ctx: TelegrafContext) => {
 })
 
 import handleUserCallback from './handleUserCallback'
+import handleAdminCallback from './handleAdminCallback'
 bot.on('callback_query', async (ctx: TelegrafContext) => {
     try {
-        await handleUserCallback(ctx, sql)
+        if (ctx.from.id == +process.env.ADMIN_ID) {
+            await handleAdminCallback(ctx, sql)
+        } else {
+            await handleUserCallback(ctx, sql)
+        }
     } catch (e) {
         ctx.reply('❌ Непредвиденная ошибка. Попробуйте позже')
         console.log(e)

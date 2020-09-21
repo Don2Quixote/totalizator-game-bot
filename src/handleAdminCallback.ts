@@ -6,6 +6,8 @@ import { TelegrafContext } from 'telegraf/typings/context'
 export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     let [command, ...args] = ctx.update.callback_query.data.split(':')
     console.log(command, args)
-
-
+    
+    if (command == 'removeRequest') {
+        ctx.deleteMessage()
+    }
 }

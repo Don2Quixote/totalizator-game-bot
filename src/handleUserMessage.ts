@@ -22,7 +22,7 @@ const TEMPLATES = {
                   { text: '💸 Stake', callback_data: 'stake' } ],
                 [ { text: '📥 Deposit', callback_data: 'deposit' },
                   { text: '📤 Withdraw', callback_data: 'withdraw' } ],
-                [ { text: '👥 Refferals', callback_data: 'refferals' } ],
+                [ { text: '👥 Referrals', callback_data: 'referrals' } ],
                 [ { text: '📢 Rules', callback_data: 'rules' },
                   { text: '⚙️ Settings', callback_data: 'settings' } ]
             ],
@@ -31,10 +31,16 @@ const TEMPLATES = {
                   { text: '💸 Ставка', callback_data: 'stake' } ],
                 [ { text: '📥 Пополнить', callback_data: 'deposit' },
                   { text: '📤 Вывести', callback_data: 'withdraw' } ],
-                [ { text: '👥 Рефералы', callback_data: 'refferals' } ],
+                [ { text: '👥 Рефералы', callback_data: 'referrals' } ],
                 [ { text: '📢 Правила', callback_data: 'rules' },
                   { text: '⚙️ Настройки', callback_data: 'settings' } ]
             ]
+        }
+    },
+    TOO_LONG_TRANSACTION_ID: {
+        TEXT: {
+            US: '❌ Too long transaction ID',
+            RU: '❌ Слишком длинный ID транзакции'
         }
     },
     DEPOSIT_REQUEST_CANCELED: {
@@ -108,7 +114,9 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             referrer = await getUser(bd, referrerID)
         }
         if (referrer) {
-            await addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name, referrerID)
+            let p1 = addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name, referrerID)
+            let p2 = updateUser(bd, referrerID, 'referrals', referrer.referrals + 1)
+            await p1; await p2;
         } else {
             await addUser(bd, ctx.from.id, ctx.from.username || ctx.from.first_name)
         }
@@ -135,12 +143,12 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 }
             })
         } else {
-            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [ctx.message.text, 'withdrawSum'])
+            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [`${user.actionData},${ctx.message.text.replace(/[,]/g, '')}`, 'withdrawSum'])
             ctx.reply(TEMPLATES.WITHDRAW_ENTER_SUM.TEXT[user.lang])
         }
     } else if (user.awaitingMessage == 'withdrawSum') {
         let messageText = ctx.message.text.toLowerCase()
-        let sum = ctx.message.text
+        let sum = ctx.message.text.replace(/[,]/g, '.')
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
@@ -150,15 +158,19 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             })
         } else if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
             ctx.reply(TEMPLATES.WITHDRAW_NOT_ENOUGH_FUNDS_ON_BALANCE.TEXT[user.lang])
-        } else if (+sum < 0.0005) {
+        } else if (user.actionData == 'yobitWithdraw' && parseFloat(sum) < 0.0005) {
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])
+        } else if (user.actionData != 'yobitWithdraw' && parseFloat(sum) < 0.003) {
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])
         } else {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             let messageToAdmin =
-                '📤 Вывод\n' +
-                `👤 [${mf(user.name)}](tg://user?id=${user.id}) (${user.id})\n` +
+                `📤 Вывод ${user.actionData == 'yobitWithdraw' ? '\\(Yobit код\\)' : '\\(На кошелёк\\)'}\n` +
+                `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
                 `💰 Сумма вывода: ${mf(sum)}\n` +
-                `💳 Баланс пользователя: ${mf(balanceToString(user.balance))}`
+                `💳 Баланс пользователя: ${mf(balanceToString(user.balance))}\n` +
+                (user.actionData != 'yobitWithdraw' ? ('💰 Кошелёк: ' + mf(user.actionData.split(',')[1])) : '')
+            console.log(messageToAdmin)
             ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
                 parse_mode: 'MarkdownV2',
                 reply_markup: {
@@ -167,7 +179,11 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                     ]
                 }
             })
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CREATED.TEXT[user.lang])
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CREATED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
         }
     } else if (user.awaitingMessage == 'transactionID') {
         let messageText = ctx.message.text.toLowerCase()
@@ -180,23 +196,31 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             })
         } else {
             let transactionID = ctx.message.text
-            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
-            let messageToAdmin =
-                '📥 Депозит\n' +
-                `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
-                `📌 ID Транзакции: ${transactionID}\n`
-            await ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
-                parse_mode: 'MarkdownV2',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '👁 sochain', url: 'https://sochain.com/tx/BTC/' + encodeURIComponent(transactionID) },
-                            { text: '♻️ Готово', callback_data: 'removeRequest' }
+            if (transactionID.length > 100) {
+                ctx.reply(TEMPLATES.TOO_LONG_TRANSACTION_ID.TEXT[user.lang])
+            } else {
+                await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+                let messageToAdmin =
+                    '📥 Депозит\n' +
+                    `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
+                    `📌 ID Транзакции: ${transactionID}\n`
+                await ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
+                    parse_mode: 'MarkdownV2',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: '👁 sochain', url: 'https://sochain.com/tx/BTC/' + encodeURIComponent(transactionID) },
+                                { text: '♻️ Готово', callback_data: 'removeRequest' }
+                            ]
                         ]
-                    ]
-                }
-            })
-            ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CREATED.TEXT[user.lang])
+                    }
+                })
+                ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CREATED.TEXT[user.lang], {
+                    reply_markup: {
+                        remove_keyboard: true
+                    }
+                })
+            }
         }
     }
     if (command == '/start') {

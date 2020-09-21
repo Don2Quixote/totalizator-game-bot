@@ -21,7 +21,7 @@ const TEMPLATES = {
                   { text: '💸 Stake', callback_data: 'stake' } ],
                 [ { text: '📥 Deposit', callback_data: 'deposit' },
                   { text: '📤 Withdraw', callback_data: 'withdraw' } ],
-                [ { text: '👥 Refferals', callback_data: 'refferals' } ],
+                [ { text: '👥 Referrals', callback_data: 'referrals' } ],
                 [ { text: '📢 Rules', callback_data: 'rules' },
                   { text: '⚙️ Settings', callback_data: 'settings' } ]
             ],
@@ -30,7 +30,7 @@ const TEMPLATES = {
                   { text: '💸 Ставка', callback_data: 'stake' } ],
                 [ { text: '📥 Пополнить', callback_data: 'deposit' },
                   { text: '📤 Вывести', callback_data: 'withdraw' } ],
-                [ { text: '👥 Рефералы', callback_data: 'refferals' } ],
+                [ { text: '👥 Рефералы', callback_data: 'referrals' } ],
                 [ { text: '📢 Правила', callback_data: 'rules' },
                   { text: '⚙️ Настройки', callback_data: 'settings' } ]
             ]
@@ -70,8 +70,52 @@ const TEMPLATES = {
     },
     WITHDRAW: {
         TEXT: {
+            US: '📤 Withdaw\n' +
+                '\n' +
+                'ℹ️ There are two ways to withdraw funds:\n' +
+                ' - BTC Wallet - min 0.003 BTC\n' +
+                ' - Yobit code - min 0.0005 BTC\n',
+            RU: '📤 Вывод средств\n' +
+                '\n' +
+                'ℹ️ Есть два способа вывести средства:\n' +
+                ' - BTC Кошелёк - Минимум 0.003 BTC\n' +
+                ' - Yobit код - Минимум 0.0005 BTC\n',
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '💰 Wallet', callback_data: 'walletWithdraw' },
+                  { text: '🔑 Yobit code', callback_data: 'yobitWithdraw' } ],
+                [ { text: '👈 Back', callback_data: 'back' } ]
+            ],
+            RU: [
+                [ { text: '💰 На кошелёк', callback_data: 'walletWithdraw' },
+                  { text: '🔑 Yobit код', callback_data: 'yobitWithdraw' } ],
+                [ { text: '👈 Назад', callback_data: 'back' } ]
+            ],
+        }
+    },
+    NOT_ENOUGH_BALANCE: {
+        TEXT: {
+            US: 'ℹ️ Not enough funds on balance',
+            RU: 'ℹ️ Недостаточно средств на балансе'
+        }
+    },
+    WITHDRAW_ADDRESS: {
+        TEXT: {
             US: '📤 Enter address to withdraw BTC:',
             RU: '📤 Введите адрес для вывода BTC:'
+        },
+        KEYBOARD: {
+            US: [ [ { text: '❌ Cancel withdraw' } ] ],
+            RU: [ [ { text: '❌ Отменить вывод' } ] ]
+        }
+    },
+    YOBIT_WITHDRAW: {
+        TEXT: {
+            US: '📤 Enter sum to withdraw.\n' +
+                'For examle - 0.02',
+            RU: '📤 Введите сумму для вывода.\n' +
+                'Например - 0.02'
         },
         KEYBOARD: {
             US: [ [ { text: '❌ Cancel withdraw' } ] ],
@@ -82,12 +126,6 @@ const TEMPLATES = {
         TEXT: {
             US: 'You already have withdraw request ({witdrawRequestSum})',
             RU: 'У вас уже есть заявка на вывод средств ({withdrawRequestSum})'
-        }
-    },
-    ZERO_BALANCE: {
-        TEXT: {
-            US: '❌ You have no funds on your account',
-            RU: '❌ У вас нет средств на балансе'
         }
     },
     RULES: {
@@ -126,16 +164,18 @@ const TEMPLATES = {
         TEXT: {
             US: '👥 Referrals\n' +
                 '\n' +
-                'ℹ️ Your refferer: {referrerName}\n' +
+                'ℹ️ Your referrer: {referrerName}\n' +
                 '🤝 Invited: {referralsCount}\n' +
                 '\n' +
-                '🔗 Your invitation link: t.me/{botUsername}?start={userID}',
+                '🔗 Your invitation link:\n' +
+                't.me/{botUsername}?start={userID}',
             RU: '👥 Рефералы\n' +
                 '\n' +
                 'ℹ️ Вас пригласил: {referrerName}\n' +
                 '🤝 Приглашено: {referralsCount}\n' +
                 '\n' +
-                '🔗 Ваша ссылка для приглашения: t.me/{botUsername}?start={userID}'
+                '🔗 Ваша ссылка для приглашения:\n' +
+                't.me/{botUsername}?start={userID}'
         },
         KEYBOARD: {
             US: [ [ { text: '👈 Back', callback_data: 'back' } ] ],
@@ -209,15 +249,47 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     } else if (command == 'withdraw') {
         if (user.withdrawRequest) {
             ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', balanceToString(user.withdrawRequest)), true)
-        } else if (user.balance == 0) {
-            ctx.answerCbQuery(TEMPLATES.ZERO_BALANCE.TEXT[user.lang])
         } else {
             ctx.answerCbQuery('')
-            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'withdrawAddress')
-            let replyText = TEMPLATES.WITHDRAW.TEXT[user.lang]
-            ctx.reply(replyText, {
+            let newText = TEMPLATES.WITHDRAW.TEXT[user.lang]
+            ctx.editMessageText(newText, {
                 reply_markup: {
-                    keyboard: TEMPLATES.WITHDRAW.KEYBOARD[user.lang],
+                    inline_keyboard: TEMPLATES.WITHDRAW.KEYBOARD[user.lang]
+                }
+            })
+        }
+    } else if (command == 'walletWithdraw') {
+        if (user.balance < 300000) {
+            ctx.answerCbQuery(TEMPLATES.NOT_ENOUGH_BALANCE.TEXT[user.lang])
+        } else {
+            await updateUser(bd, ctx.from.id, ['awaitingMessage', 'actionData'], ['withdrawAddress', 'walletWithdraw'])
+            let newText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
+            ctx.editMessageText(newText, {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
+                }
+            })
+            ctx.reply(TEMPLATES.WITHDRAW_ADDRESS.TEXT[user.lang], {
+                reply_markup: {
+                    keyboard: TEMPLATES.WITHDRAW_ADDRESS.KEYBOARD[user.lang],
+                    resize_keyboard: true
+                }
+            })
+        }
+    } else if (command == 'yobitWithdraw') {
+        if (user.balance < 50000) {
+            ctx.answerCbQuery(TEMPLATES.NOT_ENOUGH_BALANCE.TEXT[user.lang])
+        } else {
+            await updateUser(bd, ctx.from.id, ['awaitingMessage', 'actionData'], ['withdrawSum', 'yobitWithdraw'])
+            let newText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
+            ctx.editMessageText(newText, {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
+                }
+            })
+            ctx.reply(TEMPLATES.YOBIT_WITHDRAW.TEXT[user.lang], {
+                reply_markup: {
+                    keyboard: TEMPLATES.YOBIT_WITHDRAW.KEYBOARD[user.lang],
                     resize_keyboard: true
                 }
             })
@@ -236,7 +308,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 inline_keyboard: TEMPLATES.SETTINGS.KEYBOARD[user.lang]
             }
         })
-    } else if (command == 'refferals') {
+    } else if (command == 'referrals') {
         ctx.answerCbQuery('')
         let referrer = await getUser(bd, user.referrer)
         let newText =
@@ -250,5 +322,11 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 inline_keyboard: TEMPLATES.REFERRALS.KEYBOARD[user.lang]
             }
         })
+    } else if (command == 'freeStake') {
+        ctx.answerCbQuery('Not ready yet')
+    } else if (command == 'stake') {
+        ctx.answerCbQuery('Not ready yet')
+    } else {
+        ctx.answerCbQuery('❌ Command ' + command + ' not exists')
     }
 }
