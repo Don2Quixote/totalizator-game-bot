@@ -62,6 +62,10 @@ const TEMPLATES = {
         TEXT: {
             US: '📥 Enter the transaction ID:',
             RU: '📥 Введите ID транзакции:'
+        },
+        KEYBOARD: {
+            US: [ [ { text: '❌ Cancel deposit' } ] ],
+            RU: [ [ { text: '❌ Отменить депозит' } ] ]
         }
     },
     WITHDRAW: {
@@ -175,7 +179,12 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             }
         })
         let replyText = TEMPLATES.SUBMIT_DEPOSIT.TEXT[user.lang]
-        ctx.reply(replyText)
+        ctx.reply(replyText, {
+            reply_markup: {
+                keyboard: TEMPLATES.SUBMIT_DEPOSIT.KEYBOARD[user.lang],
+                resize_keyboard: true
+            }
+        })
     } else if (command == 'withdraw') {
         if (user.withdrawRequest) {
             ctx.answerCbQuery(TEMPLATES.ALREADY_HAVE_WITHDRAW_REQUEST.TEXT[user.lang].replace('{withdrawRequestSum}', balanceToString(user.withdrawRequest)), true)
