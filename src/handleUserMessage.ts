@@ -37,6 +37,12 @@ const TEMPLATES = {
             ]
         }
     },
+    DEPOSIT_CANCELED: {
+        TEXT: {
+            US: 'ℹ️ Deposit canceled',
+            RU: 'ℹ️ Депозит отмёнен',
+        }
+    },
     WITHDRAW_ENTER_SUM: {
         TEXT: {
             US: '📤 Now enter sum you want to withdraw (Example: 0.00004307):',
@@ -149,23 +155,33 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CREATED.TEXT[user.lang])
         }
     } else if (user.awaitingMessage == 'transactionID') {
-        let transactionID = ctx.message.text
-        await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
-        let messageToAdmin =
-            '📥 Депозит\n' +
-            `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
-            `📌 ID Транзакции: ${transactionID}\n`
-        ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
-            parse_mode: 'MarkdownV2',
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: '👁 sochain', url: 'https://sochain.com/tx/BTC/' + encodeURIComponent(transactionID) },
-                        { text: '♻️ Готово', callback_data: 'removeRequest' }
+        let messageText = ctx.message.text.toLowerCase()
+        if (messageText.includes('отменить') || messageText.includes('cancel')) {
+            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
+            ctx.reply(TEMPLATES.DEPOSIT_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else {
+            let transactionID = ctx.message.text
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            let messageToAdmin =
+                '📥 Депозит\n' +
+                `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
+                `📌 ID Транзакции: ${transactionID}\n`
+            ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
+                parse_mode: 'MarkdownV2',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '👁 sochain', url: 'https://sochain.com/tx/BTC/' + encodeURIComponent(transactionID) },
+                            { text: '♻️ Готово', callback_data: 'removeRequest' }
+                        ]
                     ]
-                ]
-            }
-        })
+                }
+            })
+        }
     }
     if (command == '/start') {
         let replyText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
