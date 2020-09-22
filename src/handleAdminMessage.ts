@@ -1,13 +1,25 @@
 import * as mysql from 'mysql2'
-import { getUser, updateUser } from './users'
+import { getBalance, getUser, updateUser } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
 const TEMPLATES = {
     BALANCE_REPLENISHED: {
         TEXT: {
-            RU: 'ℹ️ Ваш баланс пополнен на {satoshiCount} сатоши',
-            US: 'ℹ️ Your balance has been replenished by {satoshiCount} satoshi'
+            US: 'ℹ️ Your balance has been replenished by {satoshiCount} satoshi',
+            RU: 'ℹ️ Ваш баланс пополнен на {satoshiCount} сатоши'
+        }
+    },
+    DEBITED_FROM_BALANCE: {
+        TEXT: {
+            US: 'ℹ️ {satoshiCount} satoshi was debited from yout balance',
+            RU: 'ℹ️ С вашего баланса списано {satoshiCount} сатоши'
+        }
+    },
+    YOUR_YOBIT_CODE: {
+        TEXT: {
+            US: '🔑 Your Yobit code: {code}',
+            RU: '🔑 Ваш Yobit код: {code}'
         }
     }
 }
@@ -51,14 +63,36 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             ctx.telegram.sendMessage(args[0], TEMPLATES.BALANCE_REPLENISHED.TEXT[user.lang].replace('{satoshiCount}', args[1]))
         }
     } else if (command == '/userBalance') {
-        let user: IUser = await getUser(bd, +args[0])
-        if (!user) {
-            ctx.reply('❌ Пользователь не найден')
+        if (!args[0] || !parseInt(args[0])) {
+            ctx.reply('❌ Неправильное использование команды')
         } else {
-            ctx.reply('💰 Баланс пользователя ' + user.name + ': ' + balanceToString(user.balance) + ' BTC')
+            let user: IUser = await getUser(bd, +args[0])
+            if (!user) {
+                ctx.reply('❌ Пользователь не найден')
+            } else {
+                ctx.reply('💰 Баланс пользователя ' + user.name + ': ' + balanceToString(user.balance) + ' BTC')
+            }
+        }
+    } else if (command == '/sendCode') {
+        if (args.length < 2) {
+            ctx.reply('❌ Неправильное использование команды')
+        } else {
+            let user: IUser = await getUser(bd, +args[0])
+            if (!user) {
+                ctx.reply('❌ Пользователь не найден')
+            } else {
+                try {
+                    await ctx.telegram.sendMessage(args[0], TEMPLATES.YOUR_YOBIT_CODE.TEXT[user.lang].replace('{code}', args[1]))
+                } catch (e) {
+                    ctx.reply('❌ Ошибка при отправке сообщения пользователю')
+                    return
+                }
+                ctx.reply('✅ Код отправлен')
+            }
         }
     } else if (command == '/balance') {
-        
+        let balance = await getBalance(bd)
+        ctx.reply('💰 Balance: ' + balance.toString())
     } else if (command == '/vip') {
         let user: IUser = await getUser(bd, +args[0])
         if (!user) {

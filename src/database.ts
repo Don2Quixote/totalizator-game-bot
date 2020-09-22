@@ -1,12 +1,20 @@
 import { IUser, IUserRow } from './user.d'
 import * as mysql from 'mysql2'
 
+export async function getBalance(bd: mysql.Connection): Promise<number> {
+    return new Promise((resolve, reject) => {
+        bd.query('SELECT balance FROM balance', (err, queryResult) => {
+            if (err) reject(err)
+            else resolve(queryResult[0].balance)
+        })
+    })
+}
+
 export async function getUser(bd: mysql.Connection, id: number): Promise<IUser> {
     return new Promise((resolve, reject) => {
         bd.query('SELECT IF(EXISTS(SELECT * FROM users WHERE id = ?), 1, 0) AS userExists', [id], (err, queryResult) => {
-            let result = queryResult[0]
             if (err) reject(err)
-            else if (result.userExists) {
+            else if (queryResult[0].userExists) {
                 bd.query('SELECT * FROM users WHERE id = ?', [id], (err, queryResult) => {
                     if (err) reject(err)
                     else {

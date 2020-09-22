@@ -1,5 +1,5 @@
 import * as mysql from 'mysql2'
-import { getUser, updateUser } from './users'
+import { getUser, updateUser } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 

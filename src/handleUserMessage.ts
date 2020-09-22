@@ -1,6 +1,6 @@
 import mf from './md_friendly'
 import * as mysql from 'mysql2'
-import { addUser, getUser, updateUser } from './users'
+import { addUser, getUser, updateUser } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -57,8 +57,14 @@ const TEMPLATES = {
     },
     WITHDRAW_ENTER_SUM: {
         TEXT: {
-            US: '📤 Now enter sum you want to withdraw (Example: 0.00004307):',
-            RU: '📤 Теперь введите сумму, которую хотите вывести (Например: 0.00004307):'
+            US: '📤 Now enter sum you want to withdraw (Example: 0.02):',
+            RU: '📤 Теперь введите сумму, которую хотите вывести (Например: 0.02):'
+        }
+    },
+    INCORRECT_SUM: {
+        TEXT: {
+            US: '❌ Incorrect input sum',
+            RU: '❌ Некорректный ввод'
         }
     },
     WITHDRAW_NOT_ENOUGH_FUNDS_ON_BALANCE: {
@@ -67,7 +73,13 @@ const TEMPLATES = {
             RU: '❌ У вас недостаточно средств на балансе'
         }
     },
-    WITHDRAW_REQUEST_LESS_THAN_MIN_SUM: {
+    WITHDRAW_REQUEST_LESS_THAN_MIN_WALLET_SUM: {
+        TEXT: {
+            US: '❌ Minimal sum to withdraw is: 0.003 BTC',
+            RU: '❌ Минимальная сумма для вывода: 0.003 BTC'
+        }
+    },
+    WITHDRAW_REQUEST_LESS_THAN_MIN_YOBIT_SUM: {
         TEXT: {
             US: '❌ Minimal sum to withdraw is: 0.0005 BTC',
             RU: '❌ Минимальная сумма для вывода: 0.0005 BTC'
@@ -149,6 +161,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     } else if (user.awaitingMessage == 'withdrawSum') {
         let messageText = ctx.message.text.toLowerCase()
         let sum = ctx.message.text.replace(/[,]/g, '.')
+        console.log(parseFloat(sum))
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
@@ -158,10 +171,12 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             })
         } else if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
             ctx.reply(TEMPLATES.WITHDRAW_NOT_ENOUGH_FUNDS_ON_BALANCE.TEXT[user.lang])
+        } else if (!parseFloat(sum)) {
+            ctx.reply(TEMPLATES.INCORRECT_SUM.TEXT[user.lang])
         } else if (user.actionData == 'yobitWithdraw' && parseFloat(sum) < 0.0005) {
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_YOBIT_SUM.TEXT[user.lang])
         } else if (user.actionData != 'yobitWithdraw' && parseFloat(sum) < 0.003) {
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_SUM.TEXT[user.lang])
+            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_LESS_THAN_MIN_WALLET_SUM.TEXT[user.lang])
         } else {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             let messageToAdmin =
@@ -170,7 +185,6 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 `💰 Сумма вывода: ${mf(sum)}\n` +
                 `💳 Баланс пользователя: ${mf(balanceToString(user.balance))}\n` +
                 (user.actionData != 'yobitWithdraw' ? ('💰 Кошелёк: ' + mf(user.actionData.split(',')[1])) : '')
-            console.log(messageToAdmin)
             ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
                 parse_mode: 'MarkdownV2',
                 reply_markup: {
@@ -222,14 +236,12 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 })
             }
         }
-    }
-    if (command == '/start') {
+    } else {
         let replyText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
         ctx.reply(replyText, {
             reply_markup: {
                 inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
             }
         })
-    } else if (command == '/withdraw') {
     }
 }
