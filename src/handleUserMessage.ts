@@ -1,6 +1,6 @@
 import mf from './md_friendly'
 import * as mysql from 'mysql2'
-import { addUser, getUser, updateUser } from './database'
+import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -34,6 +34,62 @@ const TEMPLATES = {
                 [ { text: '👥 Рефералы', callback_data: 'referrals' } ],
                 [ { text: '📢 Правила', callback_data: 'rules' },
                   { text: '⚙️ Настройки', callback_data: 'settings' } ]
+            ]
+        }
+    },
+    NOT_NUMBER_STAKE: {
+        TEXT: {
+            US: '❌ Not correct prediction',
+            RU: '❌ Некорректный ввод прогноза'
+        }
+    },
+    TOO_LONG_FLOATING_PART: {
+        TEXT: {
+            US: '❌ Prediction floating part limit is 2',
+            RU: '❌ Максимальное количество знаков в плавающей части прогноза - 2'
+        }
+    },
+    TOO_BIG_NUMBER_IN_PREDICTION: {
+        TEXT: {
+            US: '❌ Prediction can\'t be bigger than 100000 USD',
+            RU: '❌ Прогноз не может быть больше 100000 USD'
+        }
+    },
+    STAKE_REQUEST_CANCELED: {
+        TEXT: {
+            US: 'ℹ️ Stake canceled',
+            RU: 'ℹ️ Ставка отменена',
+        }
+    },
+    TOO_LONG_GROUP_MESSAGE: {
+        TEXT: {
+            US: '❌ Max message lenght is 250 chars',
+            RU: '❌ Максимальная длина сообщения - 250 символов'
+        }
+    },
+    FREE_STAKE_CREATED: {
+        TEXT: {
+            US: '✅ Prediction accepted',
+            RU: '✅ Прогноз принят'
+        }
+    },
+    STAKE_CREATED: {
+        TEXT: {
+            US: '✅ Prediction accepted',
+            RU: '✅ Прогноз принят'
+        }
+    },
+    YOU_CAN_LEAVE_A_MESSAGE: {
+        TEXT: {
+            US: 'ℹ️ As you are VIP user, you can leave a message to post it in group:',
+            RU: 'ℹ️ Так как вы VIP пользователь, вы можете оставить сообщение, которое будет опубликовано в группе:'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '❌ Cancel stake' }, { text: '👉 Skip' } ]
+            ],
+            RU: [
+                [ { text: '❌ Отменить ставку' }, { text: '👉 Пропустить' } ]
             ]
         }
     },
@@ -145,7 +201,127 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         return
     }
     
-    if (user.awaitingMessage == 'withdrawAddress') {
+    if (user.awaitingMessage == 'freeStake') {
+        let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
+        if (messageText.includes('отменить') || messageText.includes('cancel')) {
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else if (isNaN(parseFloat(messageText))) {
+            ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
+        } else if (parseFloat(parseFloat(messageText).toFixed(2)) != parseFloat(messageText)) {
+            ctx.reply(TEMPLATES.TOO_LONG_FLOATING_PART.TEXT[user.lang])
+        } else if (parseFloat(messageText) > 100000) {
+            ctx.reply(TEMPLATES.TOO_BIG_NUMBER_IN_PREDICTION.TEXT[user.lang])
+        } else if (parseFloat(messageText) <= 0) {
+            ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
+        } else {
+            await addFreeStake(bd, user.id, messageText)
+            await updateUser(bd, ctx.from.id, ['freeStake', 'awaitingMessage'], [messageText, ''])
+            ctx.reply(TEMPLATES.FREE_STAKE_CREATED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+            let groupMessageText =
+                `👤 Пользователь ${user.name}\n` +
+                `❇️ Сделал бесплатную ставку\n` +
+                `💲 Его прогноз: ${messageText}`
+                ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+        }
+    } else if (user.awaitingMessage == 'stake') {
+        let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
+        if (messageText.includes('отменить') || messageText.includes('cancel')) {
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
+            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else if (isNaN(parseFloat(messageText))) {
+            ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
+        } else if (parseFloat(parseFloat(messageText).toFixed(2)) != parseFloat(messageText)) {
+            ctx.reply(TEMPLATES.TOO_LONG_FLOATING_PART.TEXT[user.lang])
+        } else if (parseFloat(messageText) > 100000) {
+            ctx.reply(TEMPLATES.TOO_BIG_NUMBER_IN_PREDICTION.TEXT[user.lang])
+        } else if (parseFloat(messageText) <= 0) {
+            ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
+        } else {
+            await addStake(bd, user.id, messageText)
+            let newUserStakes = user.stakes.join(',')
+            if (newUserStakes) newUserStakes += ','
+            newUserStakes += messageText
+            if (!user.vip) {
+                let groupMessageText =
+                    `👤 Пользователь ${user.name}\n` +
+                    `❇️ Сделал бесплатную ставку\n` +
+                    `💲 Его прогноз: ${messageText}`
+                ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+                await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
+                ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+                    reply_markup: {
+                        remove_keyboard: true
+                    }
+                })
+            } else {
+                await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [messageText, 'groupMessageText'])
+                ctx.reply(TEMPLATES.YOU_CAN_LEAVE_A_MESSAGE.TEXT[user.lang], {
+                    reply_markup: {
+                        keyboard: TEMPLATES.YOU_CAN_LEAVE_A_MESSAGE.KEYBOARD[user.lang],
+                        resize_keyboard: true
+                    }
+                })
+            }
+        }
+    } else if (user.awaitingMessage == 'groupMessageText') {
+        let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
+        if (messageText.includes('cancel') || messageText.includes('отменить')) {
+            await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
+            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else if (messageText.includes('skip') || messageText.includes('пропустить')) {
+            await addStake(bd, user.id, messageText)
+            let newUserStakes = user.stakes.join(',')
+            if (newUserStakes) newUserStakes += ','
+            newUserStakes += messageText
+            let groupMessageText =
+                `👤 VIP Пользователь ${user.name}\n` +
+                `❇️ Сделал бесплатную ставку\n` +
+                `💲 Его прогноз: ${user.actionData}`
+            ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
+            ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                }
+            })
+        } else if (ctx.message.text.length > 250) {
+            ctx.reply(TEMPLATES.TOO_LONG_GROUP_MESSAGE.TEXT[user.lang])
+        } else {
+            await addStake(bd, user.id, messageText)
+            let newUserStakes = user.stakes.join(',')
+            if (newUserStakes) newUserStakes += ','
+            newUserStakes += messageText
+            let groupMessageText =
+                `👤 VIP Пользователь ${user.name}\n` +
+                `❇️ Сделал бесплатную ставку\n` +
+                `💲 Его прогноз: ${user.actionData}` +
+                `✉️ Сообщедние пользователя: ${ctx.message.text}`
+            ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
+            ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+                reply_markup: {
+                    remove_keyboard: true
+                 }
+            })
+        }
+    } else if (user.awaitingMessage == 'withdrawAddress') {
         let messageText = ctx.message.text.toLowerCase()
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
@@ -161,7 +337,6 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     } else if (user.awaitingMessage == 'withdrawSum') {
         let messageText = ctx.message.text.toLowerCase()
         let sum = ctx.message.text.replace(/[,]/g, '.')
-        console.log(parseFloat(sum))
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
             ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {

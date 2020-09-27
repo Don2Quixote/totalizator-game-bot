@@ -1,6 +1,24 @@
 import { IUser, IUserRow } from './user.d'
 import * as mysql from 'mysql2'
 
+export async function addFreeStake(bd: mysql.Connection, userID: number, prediction: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        bd.query(`INSERT INTO freeStakes (userID, prediction) VALUES (${userID}, "${prediction}")`, (err, queryResult) => {
+            if (err) reject(err)
+            else resolve(true)
+        })
+    })
+}
+
+export async function addStake(bd: mysql.Connection, userID: number, prediction: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        bd.query(`INSERT INTO stakes (userID, prediction) VALUES (${userID}, "${prediction}")`, (err, queryResult) => {
+            if (err) reject(err)
+            else resolve(true)
+        })
+    })
+}
+
 export async function getBalance(bd: mysql.Connection): Promise<number> {
     return new Promise((resolve, reject) => {
         bd.query('SELECT balance FROM balance', (err, queryResult) => {

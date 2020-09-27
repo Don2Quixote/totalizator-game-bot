@@ -36,6 +36,88 @@ const TEMPLATES = {
             ]
         }
     },
+    FREE_STAKE: {
+        TEXT: {
+            US: '❇️ Free stake\n' +
+                '\n' +
+                'Everyday until 15:00 (Moscow Time) you can place a free stake',
+            RU: '❇️ Бесплатная ставка\n' +
+                '\n' +
+                'Каждый день до 15:00 (МСК) вы можете сделать бесплатную ставку'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '❇️ Place stake', callback_data: 'placeFreeStake' } ],
+                [ { text: '👈 Back', callback_data: 'back' } ]
+            ],
+            RU: [
+                [ { text: '❇️ Сделать ставку', callback_data: 'placeFreeStake' } ],
+                [ { text: '👈 Назад', callback_data: 'back' } ]
+            ]
+        }
+    },
+    STAKE: {
+        TEXT: {
+            US: '💸 Stake\n' +
+                '\n' + 
+                'Price of each stake - 10.000 satoshi.\n' +
+                'You can place not more than 50 stakes per day',
+            RU: '💸 Ставка\n' +
+                '\n' +
+                'Стоимость каждой ставки - 10.000 сатоши.\n' +
+                'Вы можете сделать не более 50 ставок за день.'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '💸 Place stake', callback_data: 'placeStake' } ],
+                [ { text: '👈 Back', callback_data: 'back' } ]
+            ],
+            RU: [
+                [ { text: '💸 Сделать ставку', callback_data: 'placeStake' } ],
+                [ { text: '👈 Назад', callback_data: 'back' } ]
+            ]
+        }
+    },
+    ALREADY_PLACED_FREE_STAKE: {
+        TEXT: {
+            US: '❌ You already placed a free stake today',
+            RU: '❌ Вы уже сделали бесплатную ставку сегодня'
+        }
+    },
+    TOO_MANY_STAKES: {
+        TEXT: {
+            US: '❌ You can\'t place more than 50 stakes per day',
+            RU: '❌ Вы не можете разместить более 50 ставок в день'
+        }
+    },
+    PLACE_FREE_STAKE: {
+        TEXT: {
+            US: '💲 Send me your prediction:',
+            RU: '💲 Отправьте свой прогноз:'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '❌ Cancel free stake' } ]
+            ],
+            RU: [
+                [ { text: '❌ Отменить ставку' } ]
+            ]
+        }
+    },
+    PLACE_STAKE: {
+        TEXT: {
+            US: '💲 Send me your prediction:',
+            RU: '💲 Отправьте свой прогноз:'
+        },
+        KEYBOARD: {
+            US: [
+                [ { text: '❌ Cancel stake' } ]
+            ],
+            RU: [
+                [ { text: '❌ Отменить ставку' } ]
+            ]
+        }
+    },
     DEPOSIT: {
         TEXT: {
             US: '📥 To deposit funds to your balance, send sum you wish to this BTC address:\n' +
@@ -204,6 +286,50 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     
     if (!user) {
         ctx.answerCbQuery('❌ Something went wrong')
+    } else if (command == 'freeStake') {
+        ctx.answerCbQuery()
+        let newText = TEMPLATES.FREE_STAKE.TEXT[user.lang]
+        ctx.editMessageText(newText, {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.FREE_STAKE.KEYBOARD[user.lang]
+            }
+        })
+    } else if (command == 'stake') {
+        ctx.answerCbQuery()
+        let newText = TEMPLATES.STAKE.TEXT[user.lang]
+        ctx.editMessageText(newText, {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.STAKE.KEYBOARD[user.lang]
+            }
+        })
+    } else if (command == 'placeFreeStake') {
+        if (user.freeStake) {
+            ctx.answerCbQuery(TEMPLATES.ALREADY_PLACED_FREE_STAKE.TEXT[user.lang])
+        } else {
+            ctx.answerCbQuery()
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'freeStake')
+            ctx.reply(TEMPLATES.PLACE_FREE_STAKE.TEXT[user.lang], {
+                 reply_markup: {
+                     keyboard: TEMPLATES.PLACE_FREE_STAKE.KEYBOARD[user.lang],
+                     resize_keyboard: true
+                 }
+            })
+        }
+    } else if (command == 'placeStake') {
+        if (user.stakes.length >= 50) {
+            ctx.answerCbQuery(TEMPLATES.TOO_MANY_STAKES.TEXT[user.lang])
+        } else if (user.balance < 10000) {
+            ctx.answerCbQuery(TEMPLATES.NOT_ENOUGH_BALANCE.TEXT[user.lang])
+        } else {
+            ctx.answerCbQuery()
+            await updateUser(bd, ctx.from.id, 'awaitingMessage', 'stake')
+            ctx.reply(TEMPLATES.PLACE_STAKE.TEXT[user.lang], {
+                 reply_markup: {
+                     keyboard: TEMPLATES.PLACE_STAKE.KEYBOARD[user.lang],
+                     resize_keyboard: true
+                 }
+            })
+        }
     } else if (command == 'lang') {
         user.lang = args[0] as 'US' | 'RU'
         await updateUser(bd, ctx.from.id, 'lang', user.lang)
@@ -322,10 +448,6 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 inline_keyboard: TEMPLATES.REFERRALS.KEYBOARD[user.lang]
             }
         })
-    } else if (command == 'freeStake') {
-        ctx.answerCbQuery('Not ready yet')
-    } else if (command == 'stake') {
-        ctx.answerCbQuery('Not ready yet')
     } else {
         ctx.answerCbQuery('❌ Command ' + command + ' not exists')
     }
