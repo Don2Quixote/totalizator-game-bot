@@ -250,14 +250,14 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         } else if (parseFloat(messageText) <= 0) {
             ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
         } else {
-            await addStake(bd, user.id, messageText)
-            let newUserStakes = user.stakes.join(',')
-            if (newUserStakes) newUserStakes += ','
-            newUserStakes += messageText
             if (!user.vip) {
+                await addStake(bd, user.id, messageText)
+                let newUserStakes = user.stakes.join(',')
+                if (newUserStakes) newUserStakes += ','
+                newUserStakes += messageText
                 let groupMessageText =
                     `👤 Пользователь ${user.name}\n` +
-                    `❇️ Сделал бесплатную ставку\n` +
+                    `💸 Сделал ставку\n` +
                     `💲 Его прогноз: ${messageText}`
                 ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
                 await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
@@ -286,13 +286,13 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 }
             })
         } else if (messageText.includes('skip') || messageText.includes('пропустить')) {
-            await addStake(bd, user.id, messageText)
+            await addStake(bd, user.id, user.actionData)
             let newUserStakes = user.stakes.join(',')
             if (newUserStakes) newUserStakes += ','
             newUserStakes += messageText
             let groupMessageText =
                 `👤 VIP Пользователь ${user.name}\n` +
-                `❇️ Сделал бесплатную ставку\n` +
+                `💸 Сделал ставку\n` +
                 `💲 Его прогноз: ${user.actionData}`
             ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
@@ -304,14 +304,14 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         } else if (ctx.message.text.length > 250) {
             ctx.reply(TEMPLATES.TOO_LONG_GROUP_MESSAGE.TEXT[user.lang])
         } else {
-            await addStake(bd, user.id, messageText)
+            await addStake(bd, user.id, user.actionData)
             let newUserStakes = user.stakes.join(',')
             if (newUserStakes) newUserStakes += ','
             newUserStakes += messageText
             let groupMessageText =
                 `👤 VIP Пользователь ${user.name}\n` +
-                `❇️ Сделал бесплатную ставку\n` +
-                `💲 Его прогноз: ${user.actionData}` +
+                `💸 Сделал ставку\n` +
+                `💲 Его прогноз: ${user.actionData}\n` +
                 `✉️ Сообщедние пользователя: ${ctx.message.text}`
             ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
