@@ -37,6 +37,12 @@ const TEMPLATES = {
             ]
         }
     },
+    YOU_BANNED: {
+        TEXT: {
+            US: '❌ You banned',
+            RU: '❌ Вы забанены'
+        }
+    },
     NOT_NUMBER_STAKE: {
         TEXT: {
             US: '❌ Not correct prediction',
@@ -71,6 +77,12 @@ const TEMPLATES = {
         TEXT: {
             US: '✅ Prediction accepted',
             RU: '✅ Прогноз принят'
+        }
+    },
+    GAME_NOT_STARTED: {
+        TEXT: {
+            US: 'ℹ️ No stakes accepted now. Press "cancel" button to cancel stake',
+            RU: 'ℹ️ Ставки сейчас не принимаются. Нажмите кнопку отмены, чтобы отменить ставку'
         }
     },
     STAKE_CREATED: {
@@ -201,7 +213,9 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
         return
     }
     
-    if (user.awaitingMessage == 'freeStake') {
+    if (user.ban) {
+        ctx.reply(TEMPLATES.YOU_BANNED.TEXT[user.lang])
+    } else if (user.awaitingMessage == 'freeStake') {
         let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
@@ -210,6 +224,8 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                     remove_keyboard: true
                 }
             })
+        } else if (!process.env.gettingStakes) {
+            ctx.reply(TEMPLATES.GAME_NOT_STARTED.TEXT[user.lang])
         } else if (isNaN(parseFloat(messageText))) {
             ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
         } else if (parseFloat(parseFloat(messageText).toFixed(2)) != parseFloat(messageText)) {
@@ -241,6 +257,8 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                     remove_keyboard: true
                 }
             })
+        } else if (!process.env.gettingStakes) {
+            ctx.reply(TEMPLATES.GAME_NOT_STARTED.TEXT[user.lang])
         } else if (isNaN(parseFloat(messageText))) {
             ctx.reply(TEMPLATES.NOT_NUMBER_STAKE.TEXT[user.lang])
         } else if (parseFloat(parseFloat(messageText).toFixed(2)) != parseFloat(messageText)) {
@@ -289,7 +307,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
             await addStake(bd, user.id, user.actionData)
             let newUserStakes = user.stakes.join(',')
             if (newUserStakes) newUserStakes += ','
-            newUserStakes += messageText
+            newUserStakes += user.actionData
             let groupMessageText =
                 `👤 VIP Пользователь ${user.name}\n` +
                 `💸 Сделал ставку\n` +
@@ -312,7 +330,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 `👤 VIP Пользователь ${user.name}\n` +
                 `💸 Сделал ставку\n` +
                 `💲 Его прогноз: ${user.actionData}\n` +
-                `✉️ Сообщедние пользователя: ${ctx.message.text}`
+                `✉️ Сообщение пользователя: ${ctx.message.text}`
             ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
             ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {

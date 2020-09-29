@@ -117,6 +117,30 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 ctx.reply('ℹ️ У пользователя нет статуса VIP')
             }
         }
+    } else if (command == '/ban') {
+        let user: IUser = await getUser(bd, +args[0])
+        if (!user) {
+            ctx.reply('❌ Пользователь не найден')
+        } else {
+            if (!user.ban) {
+                await updateUser(bd, +args[0], 'ban', 1)
+                ctx.reply('✅ Пользователь забанен')
+            } else {
+                ctx.reply('ℹ️ Пользователь уже забанен')
+            }
+        } 
+    } else if (command == '/unban') {
+        let user: IUser = await getUser(bd, +args[0])
+        if (!user) {
+            ctx.reply('❌ Пользователь не найден')
+        } else {
+            if (user.ban) {
+                await updateUser(bd, +args[0], 'ban', 0)
+                ctx.reply('✅ Пользователь разбанен')
+            } else {
+                ctx.reply('ℹ️ Пользователь не в бане')
+            }
+        }
     } else {
         ctx.reply('❌ Неизвестная команда - ' + command.replace('/', ''))
     }
