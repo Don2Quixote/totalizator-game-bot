@@ -166,13 +166,6 @@ export async function updateUser(bd, id, fields, values) {
                 queryFields += ' '
             }
         }
-        let query = 
-            `
-            UPDATE users
-            SET
-            ${queryFields}
-            WHERE id = ${id}
-            `
         bd.query(
             `
             UPDATE users
@@ -185,6 +178,28 @@ export async function updateUser(bd, id, fields, values) {
                 else resolve(true)
             }
         )
-    });
+    })
 }
 
+import * as sqlite3 from 'sqlite3'
+
+export async function updateUserLite(bd: sqlite3.Database, id: number, fields: Array<UserRowField>, values: Array<string | number>): Promise<boolean>
+export async function updateUserLite(bd: sqlite3.Database, id: number, filed: UserRowField, value: string | number): Promise<boolean>
+export async function updateUserLite(bd, id, fields, values) {
+    return new Promise((resolve, reject) => {
+        let queryFields: string = ''
+        if (typeof fields == 'string') {
+            queryFields = `${fields}="${values}"`
+        } else {
+            for (let field in fields) {
+                queryFields += `${fields[field]}="${values[field]}"`
+                if (fields.length - +field - 1) queryFields += ','
+                queryFields += ' '
+            }
+        }
+        bd.run(`UPDATE users SET ${queryFields} WHERE id = ${id}`, err => {
+            if (err) reject(err)
+            else resolve(true)
+        })
+    })
+}
