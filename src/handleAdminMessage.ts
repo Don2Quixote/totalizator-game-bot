@@ -1,5 +1,11 @@
+import * as sqlite3 from 'sqlite3'
 import * as mysql from 'mysql2'
-import { getBalance, getUser, updateUser } from './database'
+// import { getBalance, getUser, updateUser } from './database'
+import {
+    getBalanceLite as getBalance,
+    getUserLite as getUser,
+    updateUserLite as updateUser
+} from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -37,7 +43,8 @@ const balanceToString = (satoshi: number): string => {
     return btcPart + '.' + satoshiPart
 }
 
-export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+// export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
     if (!ctx.message.text) return
     let [command, ...args] = ctx.message.text.split(' ')
     console.log(command, args)

@@ -1,6 +1,14 @@
 import mf from './md_friendly'
+import * as sqlite3 from 'sqlite3'
 import * as mysql from 'mysql2'
-import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
+// import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
+import {
+    addUserLite as addUser,
+    getUserLite as getUser,
+    updateUserLite as updateUser,
+    addStakeLite as addStake,
+    addFreeStakeLite as addFreeStake
+} from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -181,12 +189,14 @@ const balanceToString = (satoshi: number): string => {
 }
 
 
-export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+// export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
     if (!ctx.message.text) return
     let [command, ...args] = ctx.message.text.split(' ')
     console.log(command, args)
 
     let user: IUser = await getUser(bd, ctx.from.id)
+    console.log(user)
     if (!user) {
         let referrerID = parseInt(args[0])
         let referrer: IUser
