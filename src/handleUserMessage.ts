@@ -420,7 +420,7 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                 let messageToAdmin =
                     '📥 Депозит\n' +
                     `👤 [${mf(user.name)}](tg://user?id=${user.id}) \\(${user.id}\\)\n` +
-                    `📌 ID Транзакции: ${transactionID}\n`
+                    `📌 ID Транзакции: ${mf(transactionID)}\n`
                 await ctx.telegram.sendMessage(process.env.ADMIN_ID, messageToAdmin, {
                     parse_mode: 'MarkdownV2',
                     reply_markup: {
