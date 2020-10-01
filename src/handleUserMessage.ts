@@ -1,14 +1,14 @@
 import mf from './md_friendly'
 import * as sqlite3 from 'sqlite3'
 import * as mysql from 'mysql2'
-// import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
-import {
-    addUserLite as addUser,
-    getUserLite as getUser,
-    updateUserLite as updateUser,
-    addStakeLite as addStake,
-    addFreeStakeLite as addFreeStake
-} from './database'
+import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
+// import {
+//     addUserLite as addUser,
+//     getUserLite as getUser,
+//     updateUserLite as updateUser,
+//     addStakeLite as addStake,
+//     addFreeStakeLite as addFreeStake
+// } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -172,6 +172,16 @@ const TEMPLATES = {
             US: 'ℹ️ Withdraw request canceled',
             RU: 'ℹ️ Запрос на вывод средств отмёнен',
         }
+    },
+    HOW_RETURN: {
+        TEXT: {
+            US: 'ℹ️ Press button to open menu',
+            RU: 'ℹ️ Нажмите кнопку, чтобы открыть меню'
+        },
+        KEYBOARD: {
+            US: [ [ { text: '🏠 Menu', callback_data: 'openMenu' } ] ],
+            RU: [ [ { text: '🏠 Меню', callback_data: 'openMenu' } ] ]
+        }
     }
 }
 
@@ -189,8 +199,8 @@ const balanceToString = (satoshi: number): string => {
 }
 
 
-// export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
-export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
+export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+// export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
     if (!ctx.message.text) return
     let [command, ...args] = ctx.message.text.split(' ')
     console.log(command, args)
@@ -229,9 +239,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
         let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
-            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else if (!process.env.gettingStakes) {
@@ -247,24 +262,36 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
         } else {
             await addFreeStake(bd, user.id, messageText)
             await updateUser(bd, ctx.from.id, ['freeStake', 'awaitingMessage'], [messageText, ''])
-            ctx.reply(TEMPLATES.FREE_STAKE_CREATED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.FREE_STAKE_CREATED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
                 }
             })
-            let groupMessageText =
-                `👤 Пользователь ${user.name}\n` +
-                `❇️ Сделал бесплатную ставку\n` +
-                `💲 Его прогноз: ${messageText}`
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
+                }
+            })
+            if (process.env.freeStakesPoster) {
+                let groupMessageText =
+                    `👤 Пользователь ${user.name}\n` +
+                    `❇️ Сделал бесплатную ставку\n` +
+                    `💲 Его прогноз: ${messageText}`
                 ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            }
         }
     } else if (user.awaitingMessage == 'stake') {
         let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
-            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else if (!process.env.gettingStakes) {
@@ -289,14 +316,19 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                     `💲 Его прогноз: ${messageText}`
                 ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
                 await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
-                ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+                await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                     reply_markup: {
                         remove_keyboard: true
                     }
                 })
+                ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                    reply_markup: {
+                        inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
+                    }
+                })
             } else {
                 await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], [messageText, 'groupMessageText'])
-                ctx.reply(TEMPLATES.YOU_CAN_LEAVE_A_MESSAGE.TEXT[user.lang], {
+                await ctx.reply(TEMPLATES.YOU_CAN_LEAVE_A_MESSAGE.TEXT[user.lang], {
                     reply_markup: {
                         keyboard: TEMPLATES.YOU_CAN_LEAVE_A_MESSAGE.KEYBOARD[user.lang],
                         resize_keyboard: true
@@ -308,9 +340,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
         let messageText = ctx.message.text.toLowerCase().replace(/[,]/g, '.')
         if (messageText.includes('cancel') || messageText.includes('отменить')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
-            ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.STAKE_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else if (messageText.includes('skip') || messageText.includes('пропустить')) {
@@ -324,9 +361,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                 `💲 Его прогноз: ${user.actionData}`
             ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
-            ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else if (ctx.message.text.length > 250) {
@@ -343,19 +385,29 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                 `✉️ Сообщение пользователя: ${ctx.message.text}`
             ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
-            ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
                  }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
+                }
             })
         }
     } else if (user.awaitingMessage == 'withdrawAddress') {
         let messageText = ctx.message.text.toLowerCase()
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, 'awaitingMessage', '')
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else {
@@ -367,9 +419,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
         let sum = ctx.message.text.replace(/[,]/g, '.')
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else if (user.balance < +(parseFloat(sum) * 100000000).toFixed(0)) {
@@ -396,9 +453,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                     ]
                 }
             })
-            ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CREATED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.WITHDRAW_REQUEST_CREATED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         }
@@ -406,9 +468,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
         let messageText = ctx.message.text.toLowerCase()
         if (messageText.includes('отменить') || messageText.includes('cancel')) {
             await updateUser(bd, ctx.from.id, ['actionData', 'awaitingMessage'], ['', ''])
-            ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CANCELED.TEXT[user.lang], {
+            await ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CANCELED.TEXT[user.lang], {
                 reply_markup: {
                     remove_keyboard: true
+                }
+            })
+            ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                reply_markup: {
+                    inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                 }
             })
         } else {
@@ -432,9 +499,14 @@ export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
                         ]
                     }
                 })
-                ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CREATED.TEXT[user.lang], {
+                await ctx.reply(TEMPLATES.DEPOSIT_REQUEST_CREATED.TEXT[user.lang], {
                     reply_markup: {
                         remove_keyboard: true
+                    }
+                })
+                ctx.reply(TEMPLATES.HOW_RETURN.TEXT[user.lang], {
+                    reply_markup: {
+                        inline_keyboard: TEMPLATES.HOW_RETURN.KEYBOARD[user.lang]
                     }
                 })
             }

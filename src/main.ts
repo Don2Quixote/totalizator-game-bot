@@ -12,38 +12,37 @@ import handleAdminMessage from './handleAdminMessage'
 import handleUserCallback from './handleUserCallback'
 import handleAdminCallback from './handleAdminCallback'
 
-
-// import {
-//     getFreeStakesLite,
-//     getStakesLite,
-//     truncateFreeStakes,
-//     truncateStakes,
-//     updateBalance,
-//     getUser,
-//     updateUser,
-//     IStake
-// } from './database'
-
 import {
-    initDatabase,
-    getFreeStakesLite as getFreeStakes,
-    getStakesLite as getStakes,
-    truncateFreeStakesLite as truncateFreeStakes,
-    truncateStakesLite as truncateStakes,
-    updateBalanceLite as updateBalance ,
-    getUserLite as getUser,
-    updateUserLite as updateUser,
+    getFreeStakes,
+    getStakes,
+    truncateFreeStakes,
+    truncateStakes,
+    updateBalance,
+    getUser,
+    updateUser,
     IStake
 } from './database'
 
-// const sql: mysql.Connection = mysql.createConnection({
-//     host: process.env.SQL_HOST,
-//     user: process.env.SQL_USER,
-//     password: process.env.SQL_PASSWORD,
-//     database: process.env.SQL_DATABASE
-// })
+// import {
+//     initDatabase,
+//     getFreeStakesLite as getFreeStakes,
+//     getStakesLite as getStakes,
+//     truncateFreeStakesLite as truncateFreeStakes,
+//     truncateStakesLite as truncateStakes,
+//     updateBalanceLite as updateBalance ,
+//     getUserLite as getUser,
+//     updateUserLite as updateUser,
+//     IStake
+// } from './database'
 
-const sql: sqlite3.Database = new sqlite3.Database('database.db')
+const sql: mysql.Connection = mysql.createConnection({
+    host: process.env.SQL_HOST,
+    user: process.env.SQL_USER,
+    password: process.env.SQL_PASSWORD,
+    database: process.env.SQL_DATABASE
+})
+
+// const sql: sqlite3.Database = new sqlite3.Database('database.db')
 
 const bot = new Telegraf(process.env.TOKEN)
 
@@ -75,12 +74,13 @@ bot.on('callback_query', async (ctx: TelegrafContext) => {
 
 async function start() {
     // Creates tables if they not exist
-    await initDatabase(sql)
+    // await initDatabase(sql)
     bot.launch()
 }
 
 start()
 
+process.env.freeStakesPoster = 'true'
 process.env.gettingStakes = 'true'
 
 function stopGettingStakes() {

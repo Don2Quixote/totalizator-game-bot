@@ -1,10 +1,10 @@
 import * as sqlite3 from 'sqlite3'
 import * as mysql from 'mysql2'
-// import { getUser, updateUser } from './database'
-import {
-    getUserLite as getUser,
-    updateUserLite as updateUser
-} from './database'
+import { getUser, updateUser } from './database'
+// import {
+//     getUserLite as getUser,
+//     updateUserLite as updateUser
+// } from './database'
 import { IUser } from './user'
 import { TelegrafContext } from 'telegraf/typings/context'
 
@@ -284,14 +284,20 @@ const balanceToString = (satoshi: number): string => {
     return btcPart + '.' + satoshiPart
 }
 
-// export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
-export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
+export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
+// export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
     let user: IUser = await getUser(bd, ctx.from.id)
     let [command, ...args] = ctx.update.callback_query.data.split(':')
     console.log(command, args)
     
     if (!user) {
         ctx.answerCbQuery('❌ Something went wrong')
+    } else if (command == 'openMenu') {
+        ctx.editMessageText(TEMPLATES.MAIN.TEXT[user.lang], {
+            reply_markup: {
+                inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
+            }
+        })
     } else if (command == 'freeStake') {
         ctx.answerCbQuery()
         let newText = TEMPLATES.FREE_STAKE.TEXT[user.lang]
