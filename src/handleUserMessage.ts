@@ -128,7 +128,7 @@ const TEMPLATES = {
     DEPOSIT_REQUEST_CREATED: {
         TEXT: {
             US: '✅ Deposit request created',
-            RU: '✅ Заявка депозит создана'
+            RU: '✅ Заявка на депозит создана'
         }
     },
     WITHDRAW_ENTER_SUM: {
