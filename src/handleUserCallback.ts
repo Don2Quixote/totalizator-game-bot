@@ -293,7 +293,8 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     if (!user) {
         ctx.answerCbQuery('❌ Something went wrong')
     } else if (command == 'openMenu') {
-        ctx.editMessageText(TEMPLATES.MAIN.TEXT[user.lang], {
+        let newText = TEMPLATES.MAIN.TEXT[user.lang].replace('{balance}', balanceToString(user.balance)).replace('{wins}', user.wins.toString())
+        ctx.editMessageText(newText, {
             reply_markup: {
                 inline_keyboard: TEMPLATES.MAIN.KEYBOARD[user.lang]
             }
