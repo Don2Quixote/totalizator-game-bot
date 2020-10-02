@@ -17,7 +17,7 @@ const TEMPLATES = {
                 '🏆 Your wins: {wins}',
             RU: '👋 Добро пожаловать в игру "Тотализатор"!\n' +
                 '\n' +
-                '💰 Ваш баналс: {balance} BTC\n' +
+                '💰 Ваш баланс: {balance} BTC\n' +
                 '🏆 Ваши победы: {wins}'
         },
         KEYBOARD: {
