@@ -293,16 +293,19 @@ async function playPaidGame() {
         let prizePerStake = Math.round(totalPrize / winnerStakes.length)
         for (let stake of winnerStakes) {
             let user = await getUser(sql, stake.userID)
+            let userWinSum
             if (user.referrer) {
                 let referrer = await getUser(sql, user.referrer)
-                bot.telegram.sendMessage(user.id, '💸 +' + Math.round(prizePerStake * (85/100)))
-                await updateUser(sql, user.id, 'balance', user.balance + Math.round(prizePerStake * (85/100)))
+                userWinSum = Math.round(prizePerStake * (85/100))
+                bot.telegram.sendMessage(user.id, '💸 +' + userWinSum)
+                await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
                 bot.telegram.sendMessage(referrer.id, '👥 +' + Math.round(prizePerStake * (10/100)))
                 await updateUser(sql, referrer.id, 'balance', referrer.balance + Math.round(prizePerStake * (10/100)))
                 await updateBalance(sql, +Math.round(prizePerStake * (5/100)))
             } else {
-                bot.telegram.sendMessage(user.id, '💸 +' + Math.round(prizePerStake * (85/100)))
-                await updateUser(sql, user.id, 'balance', user.balance + Math.round(prizePerStake * (85/100)))
+                userWinSum = Math.round(prizePerStake * (85/100))
+                bot.telegram.sendMessage(user.id, '💸 +' + userWinSum)
+                await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
                 await updateBalance(sql, +Math.round(prizePerStake * (15/100)))
             }
             if (!playersAlreadyWon.includes(stake.userID)) {
@@ -310,13 +313,12 @@ async function playPaidGame() {
                 let user = await getUser(sql, stake.userID)
                 await updateUser(sql, user.id, 'wins', user.wins + 1)
                 let groupMessage =
-                    '💸 Пользователь ' + user.name + ' стал победителем в игре!'
+                    '💸 Пользователь ' + user.name + ' стал победителем в игре Его выигрыш - ' + userWinSum.toString()
                 bot.telegram.sendMessage(process.env.GROUP_ID, groupMessage)
             }
         }
         await truncateStakes(sql)
     }
-
 }
 
 

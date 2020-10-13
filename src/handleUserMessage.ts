@@ -1,7 +1,7 @@
 import mf from './md_friendly'
 import * as sqlite3 from 'sqlite3'
 import * as mysql from 'mysql2'
-import { addUser, getUser, updateUser, addStake, addFreeStake } from './database'
+import { getStakes, addUser, getUser, updateUser, addStake, addFreeStake } from './database'
 // import {
 //     addUserLite as addUser,
 //     getUserLite as getUser,
@@ -198,7 +198,6 @@ const balanceToString = (satoshi: number): string => {
     return btcPart + '.' + satoshiPart
 }
 
-
 export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
 // export default async (ctx: TelegrafContext, bd: sqlite3.Database) => {
     if (!ctx.message.text) return
@@ -314,7 +313,11 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                     `👤 Пользователь ${user.name}\n` +
                     `💸 Сделал ставку\n` +
                     `💲 Его прогноз: ${messageText}`
-                ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+                await ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+                let stakes = await getStakes(bd)
+                let bankSum = balanceToString(stakes.length * 10000)
+                let bankMessage = 'ℹ️ Текущий банк: ' + bankSum
+                await ctx.telegram.sendMessage(process.env.GROUP_ID, bankMessage)
                 await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
                 await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                     reply_markup: {
@@ -359,7 +362,11 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 `👤 VIP Пользователь ${user.name}\n` +
                 `💸 Сделал ставку\n` +
                 `💲 Его прогноз: ${user.actionData}`
-            ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            await ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            let stakes = await getStakes(bd)
+            let bankSum = balanceToString(stakes.length * 10000)
+            let bankMessage = 'ℹ️ Текущий банк: ' + bankSum
+            await ctx.telegram.sendMessage(process.env.GROUP_ID, bankMessage)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
             await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                 reply_markup: {
@@ -383,7 +390,11 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
                 `💸 Сделал ставку\n` +
                 `💲 Его прогноз: ${user.actionData}\n` +
                 `✉️ Сообщение пользователя: ${ctx.message.text}`
-            ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            await ctx.telegram.sendMessage(process.env.GROUP_ID, groupMessageText)
+            let stakes = await getStakes(bd)
+            let bankSum = balanceToString(stakes.length * 10000)
+            let bankMessage = 'ℹ️ Текущий банк: ' + bankSum
+            await ctx.telegram.sendMessage(process.env.GROUP_ID, bankMessage)
             await updateUser(bd, ctx.from.id, ['stakes', 'balance', 'awaitingMessage'], [newUserStakes, user.balance - 10000, ''])
             await ctx.reply(TEMPLATES.STAKE_CREATED.TEXT[user.lang], {
                 reply_markup: {
