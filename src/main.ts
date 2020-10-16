@@ -163,9 +163,9 @@ async function playFreeGame() {
             if (user.referrer) {
                 let referrer = await getUser(sql, user.referrer)
                 let prizePerStake = +process.env.PRIZE_FOR_FREE_STAKE / winnerStakes.length
-                let userWinSum = Math.round(prizePerStake * (85/100))
-                let referrerPrize = Math.round(prizePerStake * (10/100))
-                let adminPrize = Math.round(prizePerStake * (5/100))
+                let userWinSum = Math.floor(prizePerStake * (85/100))
+                let referrerPrize = Math.floor(prizePerStake * (10/100))
+                let adminPrize = Math.floor(prizePerStake * (5/100))
                 bot.telegram.sendMessage(user.id, '❇️ +' + userWinSum)
                 await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
                 bot.telegram.sendMessage(referrer.id, '👥 +' + referrerPrize)
@@ -173,8 +173,8 @@ async function playFreeGame() {
                 await updateBalance(sql, +(adminPrize))
             } else {
                 let prizePerStake = +process.env.PRIZE_FOR_FREE_STAKE / winnerStakes.length
-                let userWinSum = Math.round(prizePerStake * (85/100))
-                let adminPrize = Math.round(prizePerStake * (15/100))
+                let userWinSum = Math.floor(prizePerStake * (85/100))
+                let adminPrize = Math.floor(prizePerStake * (15/100))
                 bot.telegram.sendMessage(user.id, '❇️ +' + userWinSum)
                 await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
                 await updateBalance(sql, +(adminPrize))
@@ -290,23 +290,23 @@ async function playPaidGame() {
         console.log('Winners players: ', winnerPlayers)
         let playersAlreadyWon = []
         let totalPrize = stakes.length * 10000
-        let prizePerStake = Math.round(totalPrize / winnerStakes.length)
+        let prizePerStake = Math.floor(totalPrize / winnerStakes.length)
         for (let stake of winnerStakes) {
             let user = await getUser(sql, stake.userID)
             let userWinSum
             if (user.referrer) {
                 let referrer = await getUser(sql, user.referrer)
-                userWinSum = Math.round(prizePerStake * (85/100))
+                userWinSum = Math.floor(prizePerStake * (85/100))
                 bot.telegram.sendMessage(user.id, '💸 +' + userWinSum)
                 await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
-                bot.telegram.sendMessage(referrer.id, '👥 +' + Math.round(prizePerStake * (10/100)))
-                await updateUser(sql, referrer.id, 'balance', referrer.balance + Math.round(prizePerStake * (10/100)))
-                await updateBalance(sql, +Math.round(prizePerStake * (5/100)))
+                bot.telegram.sendMessage(referrer.id, '👥 +' + Math.floor(prizePerStake * (10/100)))
+                await updateUser(sql, referrer.id, 'balance', referrer.balance + Math.floor(prizePerStake * (10/100)))
+                await updateBalance(sql, +Math.floor(prizePerStake * (5/100)))
             } else {
-                userWinSum = Math.round(prizePerStake * (85/100))
+                userWinSum = Math.floor(prizePerStake * (85/100))
                 bot.telegram.sendMessage(user.id, '💸 +' + userWinSum)
                 await updateUser(sql, user.id, 'balance', user.balance + userWinSum)
-                await updateBalance(sql, +Math.round(prizePerStake * (15/100)))
+                await updateBalance(sql, +Math.floor(prizePerStake * (15/100)))
             }
             if (!playersAlreadyWon.includes(stake.userID)) {
                 playersAlreadyWon.push(stake.userID)
