@@ -48,10 +48,12 @@ const bot = new Telegraf(process.env.TOKEN)
 
 bot.on('message', async (ctx: TelegrafContext) => {
     try {
-        if (ctx.from.id == +process.env.ADMIN_ID) {
-            await handleAdminMessage(ctx, sql)
-        } else {
-            await handleUserMessage(ctx, sql)
+        if (ctx.chat.type == 'private') {
+            if (ctx.from.id == +process.env.ADMIN_ID) {
+                await handleAdminMessage(ctx, sql)
+            } else {
+                await handleUserMessage(ctx, sql)
+            }
         }
     } catch (e) {
         ctx.reply('❌ Непредвиденная ошибка. Попробуйте позже')
