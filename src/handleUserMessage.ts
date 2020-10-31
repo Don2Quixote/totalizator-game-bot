@@ -205,7 +205,7 @@ export default async (ctx: TelegrafContext, bd: mysql.Connection) => {
     console.log(command, args)
 
     let user: IUser = await getUser(bd, ctx.from.id)
-    console.log(user)
+
     if (!user) {
         let referrerID = parseInt(args[0])
         let referrer: IUser
